@@ -1,5 +1,1 @@
-{
-  "/api/orders/route": "app/api/orders/route.js",
-  "/api/dashboard/stats/route": "app/api/dashboard/stats/route.js",
-  "/api/outlets/[id]/alerts/route": "app/api/outlets/[id]/alerts/route.js"
-}
+{}
