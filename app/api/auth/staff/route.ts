@@ -25,20 +25,13 @@ export async function POST(req: Request) {
     );
   }
 
-  let rows =
-    await sql`SELECT * FROM staff_users WHERE (LOWER(email) = ${email} OR (role = 'super_admin' AND (${email} = 'alfiyyah@gmail.com' OR ${email} = 'admin@ercoffeelab.com'))) AND is_active = true LIMIT 1`;
+  const rows = await sql`
+    SELECT * FROM staff_users 
+    WHERE LOWER(email) = ${email} AND is_active = true 
+    LIMIT 1
+  `;
 
-  let staff = rows[0];
-
-  if (staff && staff.role === "super_admin" && (staff.full_name !== "Alfiyyah Admin" || staff.email !== "alfiyyah@gmail.com")) {
-    await sql`
-      UPDATE staff_users
-      SET full_name = 'Alfiyyah Admin', email = 'alfiyyah@gmail.com'
-      WHERE id = ${staff.id}
-    `;
-    staff.full_name = "Alfiyyah Admin";
-    staff.email = "alfiyyah@gmail.com";
-  }
+  const staff = rows[0];
 
   if (!staff) {
     return NextResponse.json(
