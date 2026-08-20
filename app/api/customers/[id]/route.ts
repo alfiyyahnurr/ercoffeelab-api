@@ -93,3 +93,74 @@ export async function GET(
     recentOrders,
   });
 }
+
+/**
+ * PATCH /api/customers/:id
+ * Customer (milik sendiri) atau Staff.
+ * Update profil customer (fullName, email, gender, phone).
+ */
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const targetId = Number(id);
+  if (isNaN(targetId)) {
+    return NextResponse.json({ error: "ID customer tidak valid" }, { status: 400 });
+  }
+
+  const auth = await requireCustomerOrStaff(req);
+  if ("error" in auth) return auth.error;
+
+  if (auth.userType === "customer" && String(auth.payload.sub) !== String(targetId)) {
+    return NextResponse.json(
+      { error: "Tidak mempunyai akses untuk memperbarui profil customer lain" },
+      { status: 403 },
+    );
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
+  }
+
+  const fullName = (body.fullName ?? body.full_name)?.trim();
+  const email = body.email?.trim();
+  const phone = body.phone?.trim();
+  const gender = body.gender?.trim();
+
+  // Validasi unik email/phone jika diubah
+  if (email) {
+    const existing = await sql`select id from customers where email = ${email} and id != ${targetId} limit 1`;
+    if (existing.length > 0) {
+      return NextResponse.json({ error: "Email sudah digunakan oleh akun lain" }, { status: 400 });
+    }
+  }
+  if (phone) {
+    const existing = await sql`select id from customers where phone = ${phone} and id != ${targetId} limit 1`;
+    if (existing.length > 0) {
+      return NextResponse.json({ error: "Nomor HP sudah digunakan oleh akun lain" }, { status: 400 });
+    }
+  }
+
+  const updatedRows = await sql`
+    UPDATE customers
+    SET 
+      full_name = COALESCE(${fullName !== undefined ? fullName : null}, full_name),
+      email = COALESCE(${email !== undefined ? email : null}, email),
+      phone = COALESCE(${phone !== undefined ? phone : null}, phone),
+      gender = COALESCE(${gender !== undefined ? gender : null}, gender),
+      updated_at = NOW()
+    WHERE id = ${targetId}
+    RETURNING id, phone, email, full_name, gender, is_verified, created_at
+  `;
+
+  if (updatedRows.length === 0) {
+    return NextResponse.json({ error: "Customer tidak ditemukan" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    message: "Profil customer berhasil diperbarui",
+    customer: formatCustomer(updatedRows[0]),
+  });
+}

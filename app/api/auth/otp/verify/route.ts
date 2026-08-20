@@ -13,6 +13,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const target = body?.target?.trim();
   const code = body?.code?.trim();
+  const fullName = (body?.fullName || body?.name)?.trim() || null;
 
   if (!target || !code) {
     return NextResponse.json({ error: "target dan code wajib diisi" }, { status: 400 });
@@ -47,14 +48,25 @@ export async function POST(req: Request) {
   let customer = existing[0];
   if (!customer) {
     const inserted = isEmail
-      ? await sql`insert into customers (email, is_verified) values (${target}, true) returning *`
-      : await sql`insert into customers (phone, is_verified) values (${target}, true) returning *`;
+      ? await sql`insert into customers (email, full_name, is_verified) values (${target}, ${fullName}, true) returning *`
+      : await sql`insert into customers (phone, full_name, is_verified) values (${target}, ${fullName}, true) returning *`;
     customer = inserted[0];
 
     // Inisialisasi loyalty account customer baru
     await sql`insert into customer_loyalty (customer_id, points, total_orders) values (${customer.id}, 0, 0)`;
-  } else if (!customer.is_verified) {
-    await sql`update customers set is_verified = true where id = ${customer.id}`;
+  } else {
+    // Update nama jika di-provide saat verifikasi OTP & pastikan is_verified = true
+    if (fullName) {
+      const updated = await sql`
+        update customers 
+        set full_name = ${fullName}, is_verified = true 
+        where id = ${customer.id} 
+        returning *
+      `;
+      customer = updated[0] || customer;
+    } else if (!customer.is_verified) {
+      await sql`update customers set is_verified = true where id = ${customer.id}`;
+    }
   }
 
   const token = await signToken({ sub: customer.id, type: "customer" });
