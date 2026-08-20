@@ -50,33 +50,72 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Simpan File ke /public/uploads/products/
+    // 3. Simpan File (Local disk untuk dev, Base64 Data URL / Cloud fallback untuk Vercel Serverless)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "products");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Cek apakah berjalan di Vercel atau lingkungan Serverless Read-Only
+    const isVercel = process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+
+    if (isVercel) {
+      // Di Vercel serverless, filesystem adalah Read-Only.
+      // Kita ubah gambar menjadi Base64 Data URL agar bisa disimpan & ditampilkan langsung di DB/UI
+      const base64Image = buffer.toString("base64");
+      const dataUrl = `data:${file.type};base64,${base64Image}`;
+
+      return NextResponse.json(
+        {
+          message: "Upload gambar berhasil (Base64 Data URL)",
+          url: dataUrl,
+          filename: file.name,
+          size: file.size,
+          mimeType: file.type,
+        },
+        { status: 201 }
+      );
     }
 
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const uniqueFileName = `${Date.now()}_${sanitizedFileName}`;
-    const filePath = path.join(uploadsDir, uniqueFileName);
+    // Jika di lokal development (Localhost), simpan ke /public/uploads/products/
+    try {
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "products");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
 
-    fs.writeFileSync(filePath, buffer);
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const uniqueFileName = `${Date.now()}_${sanitizedFileName}`;
+      const filePath = path.join(uploadsDir, uniqueFileName);
 
-    const publicUrl = `/uploads/products/${uniqueFileName}`;
+      fs.writeFileSync(filePath, buffer);
 
-    return NextResponse.json(
-      {
-        message: "Upload gambar berhasil",
-        url: publicUrl,
-        filename: uniqueFileName,
-        size: file.size,
-        mimeType: file.type,
-      },
-      { status: 201 }
-    );
+      const publicUrl = `/uploads/products/${uniqueFileName}`;
+
+      return NextResponse.json(
+        {
+          message: "Upload gambar berhasil",
+          url: publicUrl,
+          filename: uniqueFileName,
+          size: file.size,
+          mimeType: file.type,
+        },
+        { status: 201 }
+      );
+    } catch (fsErr: any) {
+      // Fallback jika permission disk lokal ditolak / EROFS
+      const base64Image = buffer.toString("base64");
+      const dataUrl = `data:${file.type};base64,${base64Image}`;
+
+      return NextResponse.json(
+        {
+          message: "Upload gambar berhasil (Fallback Data URL)",
+          url: dataUrl,
+          filename: file.name,
+          size: file.size,
+          mimeType: file.type,
+        },
+        { status: 201 }
+      );
+    }
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Gagal mengunggah file gambar" },
