@@ -122,6 +122,10 @@ export async function DELETE(req: Request) {
 
   // Cascade delete child records to avoid foreign key and not-null constraint 500 errors
   await sql`
+    DELETE FROM payment_logs 
+    WHERE order_id IN (SELECT id FROM orders WHERE customer_id = ${customerId})
+  `;
+  await sql`
     DELETE FROM order_details 
     WHERE order_id IN (SELECT id FROM orders WHERE customer_id = ${customerId})
   `;
@@ -134,14 +138,15 @@ export async function DELETE(req: Request) {
     WHERE order_id IN (SELECT id FROM orders WHERE customer_id = ${customerId})
   `;
 
-  await sql`DELETE FROM orders WHERE customer_id = ${customerId}`;
+  await sql`DELETE FROM point_transactions WHERE customer_id = ${customerId}`;
+  await sql`DELETE FROM reward_redemptions WHERE customer_id = ${customerId}`;
+  await sql`DELETE FROM notification_logs WHERE customer_id = ${customerId}`;
   await sql`DELETE FROM favorites WHERE customer_id = ${customerId}`;
   await sql`DELETE FROM customer_vouchers WHERE customer_id = ${customerId}`;
   await sql`DELETE FROM customer_loyalty WHERE customer_id = ${customerId}`;
   await sql`DELETE FROM addresses WHERE customer_id = ${customerId}`;
-  await sql`DELETE FROM point_transactions WHERE customer_id = ${customerId}`;
-  await sql`DELETE FROM reward_redemptions WHERE customer_id = ${customerId}`;
-  await sql`DELETE FROM notification_logs WHERE customer_id = ${customerId}`;
+
+  await sql`DELETE FROM orders WHERE customer_id = ${customerId}`;
 
   // Delete customer record from Neon Postgres
   await sql`DELETE FROM customers WHERE id = ${customerId}`;
