@@ -5,13 +5,10 @@ import { formatVoucher } from "./utils";
 
 /**
  * GET /api/vouchers
- * Staff only — Mengambil semua daftar voucher (admin view).
+ * Publik / Staff / Customer — Mengambil semua daftar voucher aktif.
  */
 export async function GET(req: Request) {
-  const auth = await requireStaff(req);
-  if ("error" in auth) return auth.error;
-
-  const rows = await sql`SELECT * FROM vouchers ORDER BY code ASC`;
+  const rows = await sql`SELECT * FROM vouchers WHERE is_active = true ORDER BY code ASC`;
   const data = rows.map(formatVoucher);
   return NextResponse.json({ data });
 }
