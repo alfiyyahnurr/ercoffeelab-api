@@ -42,6 +42,78 @@ export async function GET(req: Request) {
   });
 }
 
+function isValidBirthDate(dateStr: string): boolean {
+  if (!dateStr || !dateStr.trim()) return true;
+
+  const clean = dateStr.trim();
+
+  // Pattern 1: DD/MM/YYYY or DD-MM-YYYY
+  const numRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+  const numMatch = clean.match(numRegex);
+  if (numMatch) {
+    const day = parseInt(numMatch[1], 10);
+    const month = parseInt(numMatch[2], 10);
+    const year = parseInt(numMatch[3], 10);
+
+    if (year < 1900 || year > new Date().getFullYear()) return false;
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day <= daysInMonth;
+  }
+
+  // Pattern 2: DD MonthName YYYY (Indonesian month names)
+  const monthMap: Record<string, number> = {
+    januari: 1, jan: 1,
+    februari: 2, feb: 2,
+    maret: 3, mar: 3,
+    april: 4, apr: 4,
+    mei: 5,
+    juni: 6, jun: 6,
+    juli: 7, jul: 7,
+    agustus: 8, agu: 8, ags: 8,
+    september: 9, sep: 9,
+    oktober: 10, okt: 10,
+    november: 11, nov: 11,
+    desember: 12, des: 12,
+  };
+
+  const textRegex = /^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})$/;
+  const textMatch = clean.match(textRegex);
+  if (textMatch) {
+    const day = parseInt(textMatch[1], 10);
+    const monthStr = textMatch[2].toLowerCase();
+    const year = parseInt(textMatch[3], 10);
+
+    const month = monthMap[monthStr];
+    if (!month) return false;
+    if (year < 1900 || year > new Date().getFullYear()) return false;
+    if (day < 1 || day > 31) return false;
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day <= daysInMonth;
+  }
+
+  // Pattern 3: YYYY-MM-DD
+  const isoRegex = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+  const isoMatch = clean.match(isoRegex);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10);
+    const day = parseInt(isoMatch[3], 10);
+
+    if (year < 1900 || year > new Date().getFullYear()) return false;
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day <= daysInMonth;
+  }
+
+  return false;
+}
+
 /**
  * PATCH /api/customers/me
  * Header: Authorization: Bearer <token>
@@ -59,6 +131,16 @@ export async function PATCH(req: Request) {
   }
 
   const { fullName, email, phone, gender, birthDate } = body;
+
+  // Validasi format Tanggal Lahir jika diisi
+  if (birthDate && typeof birthDate === "string" && birthDate.trim()) {
+    if (!isValidBirthDate(birthDate)) {
+      return NextResponse.json(
+        { error: "Format Tanggal Lahir tidak valid (contoh: 12/06/1998 atau 12 Juni 1998)" },
+        { status: 400 }
+      );
+    }
+  }
 
   // Cek duplikasi email jika diisi
   if (email && typeof email === "string" && email.trim()) {
