@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { sql } from "@/src/db/client";
 import { requireCustomer, requireCustomerOrStaff } from "@/lib/auth-middleware";
 import { validateVoucherCode } from "@/lib/vouchers";
@@ -15,12 +16,41 @@ export async function POST(req: Request) {
   const customerId = auth.payload.sub;
 
   const body = await req.json().catch(() => null);
+  const pin = body?.pin?.toString().trim();
   const outletId = body?.outletId;
   const fulfillmentType = body?.fulfillmentType;
   const deliveryAddress = body?.deliveryAddress?.trim();
   const paymentMethodId = body?.paymentMethodId;
   const voucherCode = body?.voucherCode;
   const items = body?.items;
+
+  // Validasi Wajib Memasukkan PIN Keamanan 6 Digit
+  if (!pin || !/^\d{6}$/.test(pin)) {
+    return NextResponse.json(
+      { error: "PIN keamanan wajib diisi 6 digit angka untuk memproses transaksi" },
+      { status: 400 }
+    );
+  }
+
+  const customerPinRows = await sql`SELECT pin FROM customers WHERE id = ${customerId} LIMIT 1`;
+  const storedPinHash = customerPinRows[0]?.pin;
+
+  if (!storedPinHash) {
+    return NextResponse.json(
+      { error: "Anda belum membuat PIN keamanan. Silakan buat PIN terlebih dahulu di menu Akun Saya." },
+      { status: 400 }
+    );
+  }
+
+  const secret = process.env.JWT_SECRET || "ercoffeelab-secret-key";
+  const inputHash = crypto.createHmac("sha256", secret).update(pin).digest("hex");
+
+  if (inputHash !== storedPinHash) {
+    return NextResponse.json(
+      { error: "PIN keamanan yang Anda masukkan salah. Transaksi dibatalkan." },
+      { status: 400 }
+    );
+  }
 
   if (!outletId) {
     return NextResponse.json({ error: "outletId wajib diisi" }, { status: 400 });
