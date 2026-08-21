@@ -13,6 +13,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  
+  // Validasi ID wajib berupa angka integer
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId) || !/^\d+$/.test(id)) {
+    return NextResponse.json({ error: "ID order tidak valid (harus berupa angka)" }, { status: 400 });
+  }
+
   const auth = await requireCustomerOrStaff(req);
   if ("error" in auth) return auth.error;
 
@@ -42,7 +49,7 @@ export async function GET(
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN outlets out ON out.id = o.outlet_id
     LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
-    WHERE o.id = ${id}
+    WHERE o.id = ${numericId}
   `;
 
   const order = orderRows[0];
@@ -71,7 +78,7 @@ export async function GET(
 
   // Fetch items (order_details)
   const itemRows = await sql`
-    SELECT * FROM order_details WHERE order_id = ${id} ORDER BY id ASC
+    SELECT * FROM order_details WHERE order_id = ${numericId} ORDER BY id ASC
   `;
 
   // Fetch status history (order_status_logs)
@@ -85,7 +92,7 @@ export async function GET(
       su.full_name AS staff_name
     FROM order_status_logs l
     LEFT JOIN staff_users su ON su.id = l.changed_by_staff_id
-    WHERE l.order_id = ${id}
+    WHERE l.order_id = ${numericId}
     ORDER BY l.changed_at ASC
   `;
 
