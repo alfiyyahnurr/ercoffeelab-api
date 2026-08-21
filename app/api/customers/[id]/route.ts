@@ -149,8 +149,7 @@ export async function PATCH(
       full_name = COALESCE(${fullName !== undefined ? fullName : null}, full_name),
       email = COALESCE(${email !== undefined ? email : null}, email),
       phone = COALESCE(${phone !== undefined ? phone : null}, phone),
-      gender = COALESCE(${gender !== undefined ? gender : null}, gender),
-      updated_at = NOW()
+      gender = COALESCE(${gender !== undefined ? gender : null}, gender)
     WHERE id = ${targetId}
     RETURNING id, phone, email, full_name, gender, is_verified, created_at
   `;

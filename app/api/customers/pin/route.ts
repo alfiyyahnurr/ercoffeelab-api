@@ -6,7 +6,7 @@ import { requireCustomer } from "@/lib/auth-middleware";
 /**
  * Hash PIN 6-digit menggunakan SHA-256 dengan salt rahasia
  */
-export function hashPin(pin: string): string {
+function hashPin(pin: string): string {
   const secret = process.env.JWT_SECRET || "ercoffeelab-secret-key";
   return crypto.createHmac("sha256", secret).update(pin).digest("hex");
 }
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
   await sql`
     UPDATE customers 
-    SET pin = ${hashedPin}, updated_at = NOW() 
+    SET pin = ${hashedPin}
     WHERE id = ${customerId}
   `;
 

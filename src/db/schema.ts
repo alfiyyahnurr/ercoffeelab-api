@@ -23,6 +23,7 @@ export const customers = pgTable("customers", {
   email: text("email").unique(),
   fullName: text("full_name"),
   gender: text("gender"),
+  birthDate: text("birth_date"),
   pin: text("pin"),
   isVerified: boolean("is_verified").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

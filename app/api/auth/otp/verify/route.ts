@@ -70,14 +70,17 @@ export async function POST(req: Request) {
   }
 
   const token = await signToken({ sub: customer.id, type: "customer" });
+  const hasPin = Boolean(customer.pin && String(customer.pin).trim());
 
   return NextResponse.json({
     token,
+    hasPin,
     customer: {
       id: customer.id,
       email: customer.email,
       phone: customer.phone,
       fullName: customer.full_name,
+      hasPin,
     },
   });
 }

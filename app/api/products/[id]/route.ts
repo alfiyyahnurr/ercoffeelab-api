@@ -4,6 +4,46 @@ import { requireStaff } from "@/lib/auth-middleware";
 import { formatProduct } from "../utils";
 
 /**
+ * GET /api/products/:id
+ * Publik / Customer / Staff — Ambil detail 1 produk beserta kategorinya dan daftar addon.
+ */
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const productIdNum = Number(id);
+  if (isNaN(productIdNum)) {
+    return NextResponse.json({ error: "ID produk tidak valid" }, { status: 400 });
+  }
+
+  const rows = await sql`
+    SELECT 
+      p.*,
+      c.name AS category_name,
+      c.group_name AS category_group_name
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    WHERE p.id = ${productIdNum}
+    LIMIT 1
+  `;
+  const product = rows[0];
+
+  if (!product) {
+    return NextResponse.json({ error: "Produk tidak ditemukan" }, { status: 404 });
+  }
+
+  const addonRows = await sql`
+    SELECT id, product_id, name, extra_price, is_popular
+    FROM product_addons
+    WHERE product_id = ${productIdNum}
+    ORDER BY name ASC
+  `;
+
+  return NextResponse.json(formatProduct(product, addonRows));
+}
+
+/**
  * PATCH /api/products/:id
  * Super Admin only — Update data produk master & addonsnya.
  */
