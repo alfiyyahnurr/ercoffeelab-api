@@ -122,7 +122,7 @@ export async function DELETE(req: Request) {
 
   // Cascade delete child records to avoid foreign key and not-null constraint 500 errors
   await sql`
-    DELETE FROM order_items 
+    DELETE FROM order_details 
     WHERE order_id IN (SELECT id FROM orders WHERE customer_id = ${customerId})
   `;
   await sql`
