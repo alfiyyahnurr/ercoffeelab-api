@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     WHERE DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
       AND (${staffOutletFilter}::bigint IS NULL OR outlet_id = ${staffOutletFilter}::bigint)
       AND payment_status = 'paid'
-      AND order_status != 'cancelled'
+      AND order_status = 'completed'
   `;
 
   const todayRevenue = Number(revenueRows[0]?.today_revenue || 0);
@@ -102,7 +102,7 @@ export async function GET(req: Request) {
         ON DATE_TRUNC('week', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
-        AND o.order_status != 'cancelled'
+        AND o.order_status = 'completed'
       LEFT JOIN order_details od ON od.order_id = o.id
       LEFT JOIN products p ON p.id = od.product_id
       LEFT JOIN categories c ON c.id = p.category_id
@@ -132,7 +132,7 @@ export async function GET(req: Request) {
         ON DATE_TRUNC('month', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
-        AND o.order_status != 'cancelled'
+        AND o.order_status = 'completed'
       LEFT JOIN order_details od ON od.order_id = o.id
       LEFT JOIN products p ON p.id = od.product_id
       LEFT JOIN categories c ON c.id = p.category_id
@@ -162,7 +162,7 @@ export async function GET(req: Request) {
         ON DATE_TRUNC('year', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
-        AND o.order_status != 'cancelled'
+        AND o.order_status = 'completed'
       LEFT JOIN order_details od ON od.order_id = o.id
       LEFT JOIN products p ON p.id = od.product_id
       LEFT JOIN categories c ON c.id = p.category_id
@@ -193,7 +193,7 @@ export async function GET(req: Request) {
         ON DATE(o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
-        AND o.order_status != 'cancelled'
+        AND o.order_status = 'completed'
       LEFT JOIN order_details od ON od.order_id = o.id
       LEFT JOIN products p ON p.id = od.product_id
       LEFT JOIN categories c ON c.id = p.category_id
