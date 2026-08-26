@@ -20,13 +20,14 @@ export async function GET(req: Request) {
       ? Number(filterOutletParam)
       : null;
 
-  // 1. Omset Hari Ini (Today Revenue)
+  // 1. Omset Hari Ini (Today Revenue in WIB - Asia/Jakarta)
   const revenueRows = await sql`
     SELECT COALESCE(SUM(total), 0) AS today_revenue, COUNT(*) AS today_orders
     FROM orders
-    WHERE DATE(created_at) = CURRENT_DATE
+    WHERE DATE(created_at AT TIME ZONE 'Asia/Jakarta') = DATE(NOW() AT TIME ZONE 'Asia/Jakarta')
       AND (${staffOutletFilter}::bigint IS NULL OR outlet_id = ${staffOutletFilter}::bigint)
       AND payment_status = 'paid'
+      AND order_status != 'cancelled'
   `;
 
   const todayRevenue = Number(revenueRows[0]?.today_revenue || 0);
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
 
   const pendingActionOrders = Number(pendingRows[0]?.pending_count || 0);
 
-  // 3. Pesanan Masuk Terbaru (Latest 5 orders)
+  // 3. Pesanan Masuk Terbaru (Latest 6 orders)
   const recentOrdersRows = await sql`
     SELECT 
       o.id,
@@ -73,18 +74,27 @@ export async function GET(req: Request) {
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
   }));
 
-  // 4. Tren Penjualan Harian (Last 7 Days Trend)
+  // 4. Tren Penjualan Harian 7 Hari Terakhir (WIB Asia/Jakarta Date Series)
   const trendRows = await sql`
+    WITH date_series AS (
+      SELECT generate_series(
+        DATE(NOW() AT TIME ZONE 'Asia/Jakarta') - INTERVAL '6 days',
+        DATE(NOW() AT TIME ZONE 'Asia/Jakarta'),
+        INTERVAL '1 day'
+      )::date AS d
+    )
     SELECT 
-      TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS date_label,
-      COALESCE(SUM(total), 0) AS revenue,
-      COUNT(*) AS order_count
-    FROM orders
-    WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-      AND (${staffOutletFilter}::bigint IS NULL OR outlet_id = ${staffOutletFilter}::bigint)
-      AND payment_status = 'paid'
-    GROUP BY DATE(created_at)
-    ORDER BY DATE(created_at) ASC
+      TO_CHAR(ds.d, 'YYYY-MM-DD') AS date_label,
+      COALESCE(SUM(o.total), 0) AS revenue,
+      COUNT(o.id) AS order_count
+    FROM date_series ds
+    LEFT JOIN orders o 
+      ON DATE(o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
+      AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
+      AND o.payment_status = 'paid'
+      AND o.order_status != 'cancelled'
+    GROUP BY ds.d
+    ORDER BY ds.d ASC
   `;
 
   const dailySalesTrend = trendRows.map((r: any) => ({
