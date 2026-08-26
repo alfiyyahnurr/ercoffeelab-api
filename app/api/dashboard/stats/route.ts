@@ -93,6 +93,12 @@ export async function GET(req: Request) {
     orders: Number(r.order_count || 0),
   }));
 
+  let activeOutletName: string | null = null;
+  if (staffOutletFilter) {
+    const outletRow = await sql`SELECT name FROM outlets WHERE id = ${staffOutletFilter} LIMIT 1`;
+    activeOutletName = outletRow[0]?.name ?? null;
+  }
+
   return NextResponse.json({
     todayRevenue,
     todayOrders,
@@ -100,5 +106,7 @@ export async function GET(req: Request) {
     pendingActionOrders,
     recentOrders,
     dailySalesTrend,
+    activeOutletId: staffOutletFilter,
+    activeOutletName,
   });
 }
