@@ -92,13 +92,20 @@ export async function GET(req: Request) {
         TO_CHAR(ds.d, 'YYYY-MM-DD') AS date_label,
         'M' || TO_CHAR(ds.d, 'W (DD Mon)') AS display_label,
         COALESCE(SUM(o.total), 0) AS revenue,
-        COUNT(o.id) AS order_count
+        COUNT(DISTINCT o.id) AS order_count,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%coffee%' OR c.name ILIKE '%espresso%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%non%' OR c.name ILIKE '%tea%' OR c.name ILIKE '%chocolate%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS non_coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%food%' OR c.name ILIKE '%pastry%' OR c.name ILIKE '%snack%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS food_revenue,
+        COALESCE(SUM(CASE WHEN c.name IS NULL OR (c.name NOT ILIKE '%coffee%' AND c.name NOT ILIKE '%espresso%' AND c.name NOT ILIKE '%non%' AND c.name NOT ILIKE '%tea%' AND c.name NOT ILIKE '%chocolate%' AND c.name NOT ILIKE '%food%' AND c.name NOT ILIKE '%pastry%' AND c.name NOT ILIKE '%snack%') THEN od.unit_price * od.qty ELSE 0 END), 0) AS other_revenue
       FROM date_series ds
       LEFT JOIN orders o 
         ON DATE_TRUNC('week', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
         AND o.order_status = 'completed'
+      LEFT JOIN order_details od ON od.order_id = o.id
+      LEFT JOIN products p ON p.id = od.product_id
+      LEFT JOIN categories c ON c.id = p.category_id
       GROUP BY ds.d
       ORDER BY ds.d ASC
     `;
@@ -115,13 +122,20 @@ export async function GET(req: Request) {
         TO_CHAR(ds.d, 'YYYY-MM') AS date_label,
         TO_CHAR(ds.d, 'Mon') AS display_label,
         COALESCE(SUM(o.total), 0) AS revenue,
-        COUNT(o.id) AS order_count
+        COUNT(DISTINCT o.id) AS order_count,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%coffee%' OR c.name ILIKE '%espresso%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%non%' OR c.name ILIKE '%tea%' OR c.name ILIKE '%chocolate%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS non_coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%food%' OR c.name ILIKE '%pastry%' OR c.name ILIKE '%snack%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS food_revenue,
+        COALESCE(SUM(CASE WHEN c.name IS NULL OR (c.name NOT ILIKE '%coffee%' AND c.name NOT ILIKE '%espresso%' AND c.name NOT ILIKE '%non%' AND c.name NOT ILIKE '%tea%' AND c.name NOT ILIKE '%chocolate%' AND c.name NOT ILIKE '%food%' AND c.name NOT ILIKE '%pastry%' AND c.name NOT ILIKE '%snack%') THEN od.unit_price * od.qty ELSE 0 END), 0) AS other_revenue
       FROM date_series ds
       LEFT JOIN orders o 
         ON DATE_TRUNC('month', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
         AND o.order_status = 'completed'
+      LEFT JOIN order_details od ON od.order_id = o.id
+      LEFT JOIN products p ON p.id = od.product_id
+      LEFT JOIN categories c ON c.id = p.category_id
       GROUP BY ds.d
       ORDER BY ds.d ASC
     `;
@@ -138,13 +152,20 @@ export async function GET(req: Request) {
         TO_CHAR(ds.d, 'YYYY') AS date_label,
         TO_CHAR(ds.d, 'YYYY') AS display_label,
         COALESCE(SUM(o.total), 0) AS revenue,
-        COUNT(o.id) AS order_count
+        COUNT(DISTINCT o.id) AS order_count,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%coffee%' OR c.name ILIKE '%espresso%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%non%' OR c.name ILIKE '%tea%' OR c.name ILIKE '%chocolate%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS non_coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%food%' OR c.name ILIKE '%pastry%' OR c.name ILIKE '%snack%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS food_revenue,
+        COALESCE(SUM(CASE WHEN c.name IS NULL OR (c.name NOT ILIKE '%coffee%' AND c.name NOT ILIKE '%espresso%' AND c.name NOT ILIKE '%non%' AND c.name NOT ILIKE '%tea%' AND c.name NOT ILIKE '%chocolate%' AND c.name NOT ILIKE '%food%' AND c.name NOT ILIKE '%pastry%' AND c.name NOT ILIKE '%snack%') THEN od.unit_price * od.qty ELSE 0 END), 0) AS other_revenue
       FROM date_series ds
       LEFT JOIN orders o 
         ON DATE_TRUNC('year', o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
         AND o.order_status = 'completed'
+      LEFT JOIN order_details od ON od.order_id = o.id
+      LEFT JOIN products p ON p.id = od.product_id
+      LEFT JOIN categories c ON c.id = p.category_id
       GROUP BY ds.d
       ORDER BY ds.d ASC
     `;
@@ -162,13 +183,20 @@ export async function GET(req: Request) {
         TO_CHAR(ds.d, 'YYYY-MM-DD') AS date_label,
         TO_CHAR(ds.d, 'DD Mon') AS display_label,
         COALESCE(SUM(o.total), 0) AS revenue,
-        COUNT(o.id) AS order_count
+        COUNT(DISTINCT o.id) AS order_count,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%coffee%' OR c.name ILIKE '%espresso%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%non%' OR c.name ILIKE '%tea%' OR c.name ILIKE '%chocolate%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS non_coffee_revenue,
+        COALESCE(SUM(CASE WHEN c.name ILIKE '%food%' OR c.name ILIKE '%pastry%' OR c.name ILIKE '%snack%' THEN od.unit_price * od.qty ELSE 0 END), 0) AS food_revenue,
+        COALESCE(SUM(CASE WHEN c.name IS NULL OR (c.name NOT ILIKE '%coffee%' AND c.name NOT ILIKE '%espresso%' AND c.name NOT ILIKE '%non%' AND c.name NOT ILIKE '%tea%' AND c.name NOT ILIKE '%chocolate%' AND c.name NOT ILIKE '%food%' AND c.name NOT ILIKE '%pastry%' AND c.name NOT ILIKE '%snack%') THEN od.unit_price * od.qty ELSE 0 END), 0) AS other_revenue
       FROM date_series ds
       LEFT JOIN orders o 
         ON DATE(o.created_at AT TIME ZONE 'Asia/Jakarta') = ds.d
         AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
         AND o.payment_status = 'paid'
         AND o.order_status = 'completed'
+      LEFT JOIN order_details od ON od.order_id = o.id
+      LEFT JOIN products p ON p.id = od.product_id
+      LEFT JOIN categories c ON c.id = p.category_id
       GROUP BY ds.d
       ORDER BY ds.d ASC
     `;
@@ -179,6 +207,10 @@ export async function GET(req: Request) {
     displayLabel: r.display_label || r.date_label,
     revenue: Number(r.revenue || 0),
     orders: Number(r.order_count || 0),
+    coffeeRevenue: Number(r.coffee_revenue || 0),
+    nonCoffeeRevenue: Number(r.non_coffee_revenue || 0),
+    foodRevenue: Number(r.food_revenue || 0),
+    otherRevenue: Number(r.other_revenue || 0),
   }));
 
   let activeOutletName: string | null = null;
