@@ -17,7 +17,7 @@ const ALLOWED_MIME_TYPES = [
  * POST /api/upload
  * Require staff (super_admin / outlet_admin).
  * Body: formData containing 'file' field.
- * Returns: { url: "/uploads/products/timestamp_filename.jpg" }
+ * Returns: { url: "/uploads/products/timestamp_filename.jpg" } or Base64 Data URL on read-only serverless environments.
  */
 export async function POST(req: Request) {
   const auth = await requireStaff(req);
@@ -50,22 +50,38 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Simpan File ke /public/uploads/products/
+    // 3. Simpan File ke disk (Local Dev) ATAU Base64 Data URL (Fallback untuk Vercel / Read-Only Serverless)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "products");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const uniqueFileName = `${Date.now()}_${sanitizedFileName}`;
-    const filePath = path.join(uploadsDir, uniqueFileName);
 
-    fs.writeFileSync(filePath, buffer);
+    let publicUrl = "";
 
-    const publicUrl = `/uploads/products/${uniqueFileName}`;
+    try {
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "products");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadsDir, uniqueFileName);
+      fs.writeFileSync(filePath, buffer);
+      publicUrl = `/uploads/products/${uniqueFileName}`;
+    } catch (writeErr: any) {
+      // Fallback untuk Lingkungan Read-Only Serverless (Vercel / AWS Lambda / /var/task)
+      if (
+        writeErr?.code === "EROFS" ||
+        writeErr?.code === "EACCES" ||
+        writeErr?.message?.includes("read-only") ||
+        writeErr?.message?.includes("EROFS")
+      ) {
+        const base64 = buffer.toString("base64");
+        publicUrl = `data:${file.type};base64,${base64}`;
+      } else {
+        throw writeErr;
+      }
+    }
 
     return NextResponse.json(
       {
