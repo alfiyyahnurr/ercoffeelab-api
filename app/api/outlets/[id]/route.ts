@@ -32,6 +32,9 @@ export async function PATCH(
   const openHour = body.openHour !== undefined ? body.openHour : existing.open_hour;
   const closeHour = body.closeHour !== undefined ? body.closeHour : existing.close_hour;
   const isOpen = body.isOpen !== undefined ? Boolean(body.isOpen) : existing.is_open;
+  const deliveryFee = body.deliveryFee !== undefined ? Number(body.deliveryFee) : (existing.delivery_fee ?? 10000);
+  const maxDeliveryDistanceKm = body.maxDeliveryDistanceKm !== undefined ? Number(body.maxDeliveryDistanceKm) : (existing.max_delivery_distance_km ?? 10);
+  const isDeliveryEnabled = body.isDeliveryEnabled !== undefined ? Boolean(body.isDeliveryEnabled) : (existing.is_delivery_enabled ?? true);
   const latitude =
     body.latitude !== undefined
       ? body.latitude === null
@@ -61,7 +64,10 @@ export async function PATCH(
       close_hour = ${closeHour},
       is_open = ${isOpen},
       latitude = ${latitude},
-      longitude = ${longitude}
+      longitude = ${longitude},
+      delivery_fee = ${deliveryFee},
+      max_delivery_distance_km = ${maxDeliveryDistanceKm},
+      is_delivery_enabled = ${isDeliveryEnabled}
     WHERE id = ${id}
     RETURNING *
   `;

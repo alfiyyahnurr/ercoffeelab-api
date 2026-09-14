@@ -48,6 +48,9 @@ async function main() {
         isOpen: true,
         latitude: -6.9175,
         longitude: 107.6191,
+        deliveryFee: 10000,
+        maxDeliveryDistanceKm: "10.00",
+        isDeliveryEnabled: true,
       },
       {
         name: "ERCoffeeLab Jakarta",
@@ -57,9 +60,46 @@ async function main() {
         isOpen: true,
         latitude: -6.2088,
         longitude: 106.8456,
+        deliveryFee: 12000,
+        maxDeliveryDistanceKm: "10.00",
+        isDeliveryEnabled: true,
       },
     ])
     .returning();
+
+  // --- Delivery Tiers (Global Default & per-outlet) ---
+  await db.insert(schema.deliveryTiers).values([
+    // Tier Global Default (outletId = null)
+    {
+      outletId: null,
+      minDistanceKm: "0.00",
+      maxDistanceKm: "5.00",
+      fee: 10000,
+      isActive: true,
+    },
+    {
+      outletId: null,
+      minDistanceKm: "5.01",
+      maxDistanceKm: "10.00",
+      fee: 15000,
+      isActive: true,
+    },
+    // Tier Bandung (outletId = bandung.id)
+    {
+      outletId: bandung.id,
+      minDistanceKm: "0.00",
+      maxDistanceKm: "5.00",
+      fee: 10000,
+      isActive: true,
+    },
+    {
+      outletId: bandung.id,
+      minDistanceKm: "5.01",
+      maxDistanceKm: "10.00",
+      fee: 15000,
+      isActive: true,
+    },
+  ]);
 
   // --- Categories ---
   const [coffeeCat, foodCat] = await db

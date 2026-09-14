@@ -8,6 +8,9 @@ export function formatOutlet(row: any) {
     isOpen: Boolean(row.is_open),
     latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : null,
     longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : null,
+    deliveryFee: row.delivery_fee !== null && row.delivery_fee !== undefined ? Number(row.delivery_fee) : 10000,
+    maxDeliveryDistanceKm: row.max_delivery_distance_km !== null && row.max_delivery_distance_km !== undefined ? Number(row.max_delivery_distance_km) : 10,
+    isDeliveryEnabled: row.is_delivery_enabled !== null && row.is_delivery_enabled !== undefined ? Boolean(row.is_delivery_enabled) : true,
   };
 }
 

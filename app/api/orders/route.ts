@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { sql } from "@/src/db/client";
 import { requireCustomer, requireCustomerOrStaff } from "@/lib/auth-middleware";
 import { validateVoucherCode } from "@/lib/vouchers";
+import { getDeliveryQuote } from "@/lib/delivery";
 import { formatOrder } from "./utils";
 
 /**
@@ -201,7 +202,6 @@ export async function POST(req: Request) {
   let discount = 0;
   let voucherId: number | null = null;
 
-
   if (voucherCode && typeof voucherCode === "string" && voucherCode.trim()) {
     const voucherRes = await validateVoucherCode(voucherCode, subtotal, customerId);
     if (!voucherRes.valid) {
@@ -211,8 +211,45 @@ export async function POST(req: Request) {
     voucherId = voucherRes.voucher.id;
   }
 
-  const serviceFee = fulfillmentType === "delivery" ? 10000 : 0;
-  const total = Math.max(0, subtotal - discount + serviceFee);
+  // Hitung biaya ongkir (deliveryFee) berdasarkan jarak koordinat
+  let deliveryFee = 0;
+  let deliveryDistanceKm: number | null = null;
+  let deliveryLatitude: number | null = null;
+  let deliveryLongitude: number | null = null;
+
+  if (fulfillmentType === "delivery") {
+    const rawLat = body?.deliveryLatitude ?? body?.latitude;
+    const rawLng = body?.deliveryLongitude ?? body?.longitude;
+
+    if (rawLat !== undefined && rawLng !== undefined && rawLat !== null && rawLng !== null) {
+      const latNum = parseFloat(rawLat);
+      const lngNum = parseFloat(rawLng);
+
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        deliveryLatitude = latNum;
+        deliveryLongitude = lngNum;
+
+        const quote = await getDeliveryQuote(outletId, latNum, lngNum);
+        if (!quote.isDeliverable) {
+          return NextResponse.json(
+            { error: quote.message || "Alamat pengiriman di luar jangkauan delivery cabang ini" },
+            { status: 400 },
+          );
+        }
+
+        deliveryFee = quote.deliveryFee;
+        deliveryDistanceKm = quote.distanceKm;
+      }
+    }
+
+    // Jika koordinat tidak dikirim tapi delivery dipilih, gunakan default delivery fee outlet
+    if (deliveryFee === 0 && deliveryDistanceKm === null) {
+      deliveryFee = Number(outletRows[0].delivery_fee) || 10000;
+    }
+  }
+
+  const serviceFee = 2000; // Standar biaya platform
+  const total = Math.max(0, subtotal - discount + serviceFee + deliveryFee);
 
   // Generate orderNumber unik format ERC-YYYYMMDD-XXXX
   const now = new Date();
@@ -231,6 +268,10 @@ export async function POST(req: Request) {
       outlet_id,
       fulfillment_type,
       delivery_address,
+      delivery_fee,
+      delivery_distance_km,
+      delivery_latitude,
+      delivery_longitude,
       payment_method_id,
       subtotal,
       discount,
@@ -246,6 +287,10 @@ export async function POST(req: Request) {
       ${outletId},
       ${fulfillmentType},
       ${fulfillmentType === "delivery" ? deliveryAddress : null},
+      ${deliveryFee},
+      ${deliveryDistanceKm},
+      ${deliveryLatitude},
+      ${deliveryLongitude},
       ${paymentMethodId},
       ${subtotal},
       ${discount},

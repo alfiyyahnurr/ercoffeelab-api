@@ -67,6 +67,18 @@ export const outlets = pgTable("outlets", {
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   deliveryFee: integer("delivery_fee").notNull().default(10000),
+  maxDeliveryDistanceKm: numeric("max_delivery_distance_km", { precision: 5, scale: 2 }).notNull().default("10.00"),
+  isDeliveryEnabled: boolean("is_delivery_enabled").notNull().default(true),
+});
+
+export const deliveryTiers = pgTable("delivery_tiers", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  outletId: bigint("outlet_id", { mode: "number" }).references(() => outlets.id, { onDelete: "cascade" }), // null = global default
+  minDistanceKm: numeric("min_distance_km", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  maxDistanceKm: numeric("max_distance_km", { precision: 5, scale: 2 }).notNull(),
+  fee: integer("fee").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const categories = pgTable("categories", {
@@ -183,6 +195,10 @@ export const orders = pgTable("orders", {
   outletId: bigint("outlet_id", { mode: "number" }).notNull().references(() => outlets.id),
   fulfillmentType: text("fulfillment_type").notNull(), // 'pickup' | 'delivery'
   deliveryAddress: text("delivery_address"),
+  deliveryFee: integer("delivery_fee").notNull().default(0),
+  deliveryDistanceKm: numeric("delivery_distance_km", { precision: 5, scale: 2 }),
+  deliveryLatitude: doublePrecision("delivery_latitude"),
+  deliveryLongitude: doublePrecision("delivery_longitude"),
   paymentMethodId: bigint("payment_method_id", { mode: "number" }).references(() => paymentMethods.id),
   subtotal: integer("subtotal").notNull(),
   discount: integer("discount").notNull().default(0),
@@ -219,8 +235,8 @@ export const orderStatusLogs = pgTable("order_status_logs", {
 
 export const outletOrderAlerts = pgTable("outlet_order_alerts", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
-  outletId: bigint("outlet_id", { mode: "number" }).notNull().references(() => outlets.id),
-  orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id),
+  outletId: bigint("outlet_id", { mode: "number" }).notNull().references(() => outlets.id, { onDelete: "cascade" }),
+  orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id, { onDelete: "cascade" }),
   isAcknowledged: boolean("is_acknowledged").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -317,6 +333,9 @@ export const addresses = pgTable("addresses", {
   label: text("label").notNull(),
   recipient: text("recipient"),
   fullAddress: text("full_address").notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  deliveryNotes: text("delivery_notes"),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

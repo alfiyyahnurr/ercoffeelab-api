@@ -19,6 +19,8 @@ Urutan pengerjaan disarankan top-to-bottom. Centang kalau selesai & sudah dites 
 - [x] `GET /api/outlets/:id/menu` (publik, HANYA is_available=true)
 - [x] `GET /api/outlets/:id/alerts?unacknowledged=true` (staff, scoped outlet)
 - [x] `PATCH /api/outlets/:id/alerts/:alertId`
+- [x] `GET /api/delivery/calculate` (publik / customer — estimasi jarak & ongkir dinamis)
+- [x] `GET /api/outlets/:id/delivery-tiers`, `POST /api/outlets/:id/delivery-tiers` (CRUD tarif jarak delivery per outlet)
 
 
 ## ⬜ Products

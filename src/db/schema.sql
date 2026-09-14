@@ -49,7 +49,20 @@ CREATE TABLE IF NOT EXISTS "outlets" (
     "is_open" BOOLEAN DEFAULT true NOT NULL,
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
-    "delivery_fee" INTEGER DEFAULT 10000 NOT NULL
+    "delivery_fee" INTEGER DEFAULT 10000 NOT NULL,
+    "max_delivery_distance_km" NUMERIC(5, 2) DEFAULT 10.00 NOT NULL,
+    "is_delivery_enabled" BOOLEAN DEFAULT true NOT NULL
+);
+
+-- Delivery Tiers: Distance-based delivery fee pricing rules (Global or per-outlet)
+CREATE TABLE IF NOT EXISTS "delivery_tiers" (
+    "id" BIGSERIAL PRIMARY KEY NOT NULL,
+    "outlet_id" BIGINT REFERENCES "outlets"("id") ON DELETE CASCADE,
+    "min_distance_km" NUMERIC(5, 2) DEFAULT 0.00 NOT NULL,
+    "max_distance_km" NUMERIC(5, 2) NOT NULL,
+    "fee" INTEGER NOT NULL,
+    "is_active" BOOLEAN DEFAULT true NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
 -- Staff Users: Admin panel operators (super_admin & outlet_admin)
@@ -157,7 +170,7 @@ CREATE TABLE IF NOT EXISTS "customer_vouchers" (
 -- 5. ORDERS & FULFILLMENT
 -- ============================================================================
 
--- Orders: Parent order header
+-- -- Orders: Parent order header
 CREATE TABLE IF NOT EXISTS "orders" (
     "id" BIGSERIAL PRIMARY KEY NOT NULL,
     "order_number" TEXT NOT NULL UNIQUE,
@@ -165,6 +178,10 @@ CREATE TABLE IF NOT EXISTS "orders" (
     "outlet_id" BIGINT NOT NULL REFERENCES "outlets"("id"),
     "fulfillment_type" TEXT NOT NULL, -- 'pickup' | 'delivery'
     "delivery_address" TEXT,
+    "delivery_fee" INTEGER DEFAULT 0 NOT NULL,
+    "delivery_distance_km" NUMERIC(5, 2),
+    "delivery_latitude" DOUBLE PRECISION,
+    "delivery_longitude" DOUBLE PRECISION,
     "payment_method_id" BIGINT REFERENCES "payment_methods"("id"),
     "subtotal" INTEGER NOT NULL,
     "discount" INTEGER DEFAULT 0 NOT NULL,
@@ -197,11 +214,11 @@ CREATE TABLE IF NOT EXISTS "order_status_logs" (
     "id" BIGSERIAL PRIMARY KEY NOT NULL,
     "order_id" BIGINT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
     "status" TEXT NOT NULL,
-    "changed_by_staff_id" BIGINT REFERENCES "staff_users"("id") ON DELETE SET NULL,
+    "changed_by_staff_id" BIGINT REFERENCES "staff_users"("id"),
     "changed_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
--- Outlet Order Alerts: Incoming order notifications for outlet admin
+-- Outlet Order Alerts: Notification bar badge for incoming new orders at store level
 CREATE TABLE IF NOT EXISTS "outlet_order_alerts" (
     "id" BIGSERIAL PRIMARY KEY NOT NULL,
     "outlet_id" BIGINT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
@@ -319,6 +336,9 @@ CREATE TABLE IF NOT EXISTS "addresses" (
     "label" TEXT NOT NULL,
     "recipient" TEXT,
     "full_address" TEXT NOT NULL,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "delivery_notes" TEXT,
     "is_default" BOOLEAN DEFAULT false NOT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
@@ -333,3 +353,4 @@ CREATE INDEX IF NOT EXISTS "idx_orders_order_status" ON "orders"("order_status")
 CREATE INDEX IF NOT EXISTS "idx_orders_created_at" ON "orders"("created_at" DESC);
 CREATE INDEX IF NOT EXISTS "idx_product_outlets_outlet_id" ON "product_outlets"("outlet_id");
 CREATE INDEX IF NOT EXISTS "idx_outlet_alerts_outlet_unack" ON "outlet_order_alerts"("outlet_id") WHERE "is_acknowledged" = false;
+CREATE INDEX IF NOT EXISTS "idx_delivery_tiers_outlet_id" ON "delivery_tiers"("outlet_id");
