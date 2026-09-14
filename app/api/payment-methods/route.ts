@@ -29,6 +29,9 @@ export async function GET(req: Request) {
     : await sql`
         SELECT * FROM payment_methods
         WHERE is_active = true
+          AND LOWER(code) NOT IN ('cash', 'tunai', 'bayar_di_kasir')
+          AND LOWER(display_name) NOT LIKE '%tunai%'
+          AND LOWER(display_name) NOT LIKE '%kasir%'
           AND (${outletIdNum}::bigint IS NULL OR outlet_id IS NULL OR outlet_id = ${outletIdNum}::bigint)
         ORDER BY code ASC
       `;

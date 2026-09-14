@@ -66,6 +66,7 @@ export const outlets = pgTable("outlets", {
   isOpen: boolean("is_open").notNull().default(true),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  deliveryFee: integer("delivery_fee").notNull().default(10000),
 });
 
 export const categories = pgTable("categories", {

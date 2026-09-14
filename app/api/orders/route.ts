@@ -211,7 +211,7 @@ export async function POST(req: Request) {
     voucherId = voucherRes.voucher.id;
   }
 
-  const serviceFee = 0;
+  const serviceFee = fulfillmentType === "delivery" ? 10000 : 0;
   const total = Math.max(0, subtotal - discount + serviceFee);
 
   // Generate orderNumber unik format ERC-YYYYMMDD-XXXX
