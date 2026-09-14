@@ -1,6 +1,8 @@
 # ERD — ERCoffeeLab Database
 
-Source of truth: `src/db/schema.ts` (Drizzle). Semua ID pakai `bigserial` (64-bit integer auto-increment), timestamp pakai `timestamptz`.
+Source of truth: `src/db/schema.ts` (Drizzle) dan `src/db/schema.sql` (Raw DDL). Semua ID pakai `bigserial` (64-bit integer auto-increment), timestamp pakai `timestamptz`.
+
+> **Catatan Sinkronisasi Migrasi**: Jika ada tabel yang bertambah atau diubah kolomnya selama pengerjaan, `src/db/schema.ts` (Drizzle) dan `src/db/schema.sql` **WAJIB diselaraskan secara identik** agar saat database dipindahkan / di-migrate (`npm run db:push`), skema database baru langsung 100% cocok.
 
 
 ## Diagram relasi

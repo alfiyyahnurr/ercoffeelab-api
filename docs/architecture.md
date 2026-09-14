@@ -4,11 +4,18 @@
 - **Framework**: Next.js 15 (App Router), deploy sebagai Vercel Serverless Functions
 - **Database**: Neon Postgres (pooled connection)
 - **Query layer**: raw SQL via `@neondatabase/serverless`
-- **Migration & seed**: Drizzle Kit — TIDAK dipakai untuk query runtime
+- **Migration & seed**: Drizzle Kit (`npm run db:push`) & `seed.ts` — TIDAK dipakai untuk query runtime
 - **Auth**: JWT custom (`jose`) — 3 jalur masuk: OTP (customer), SSO Google (staff), email+password (staff, demo)
 - **Password hashing**: `bcryptjs`
 - **Payment**: Midtrans (Snap API)
-- **Notifikasi WA/Email**: Fontee
+- **Notifikasi WA/Email**: Fonnte & Resend
+
+## Aturan Sinkronisasi Skema Database (Wajib Selaras)
+Setiap kali ada **penambahan tabel baru atau modifikasi kolom/index**:
+1. `src/db/schema.ts` (Drizzle Schema) **wajib diupdate**.
+2. `src/db/schema.sql` (Raw SQL DDL) **wajib diupdate** agar 100% identik dengan Drizzle.
+3. `src/db/seed.ts` **wajib diupdate** jika ada data awal terkait.
+4. Jalankan `npm run db:push` untuk memastikan jika database dipindahkan / di-clone ke host/instance baru, seluruh struktur tabel termigrasi sempurna tanpa error.
 
 ## Struktur folder
 ```
