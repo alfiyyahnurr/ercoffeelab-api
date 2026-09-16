@@ -46,7 +46,7 @@ export async function getDeliveryQuote(
   customerLng: number,
 ): Promise<DeliveryQuoteResult> {
   const outlets = await sql`
-    SELECT id, name, latitude, longitude, delivery_fee, 
+    SELECT id, name, latitude, longitude, 
            coalesce(max_delivery_distance_km, 10.00) as max_delivery_distance_km,
            coalesce(is_delivery_enabled, true) as is_delivery_enabled
     FROM outlets
@@ -77,11 +77,11 @@ export async function getDeliveryQuote(
   const outletLng = Number(outlet.longitude);
 
   if (isNaN(outletLat) || isNaN(outletLng)) {
-    // If outlet coordinates not set, fallback to default outlet delivery fee
+    // If outlet coordinates not set, fallback to default flat delivery fee
     return {
       isDeliverable: true,
       distanceKm: 0,
-      deliveryFee: Number(outlet.delivery_fee) || 10000,
+      deliveryFee: 10000,
       maxDistanceKm,
       outletName: outlet.name,
       message: "Koordinat cabang belum dikonfigurasi, menggunakan tarif flat default.",
@@ -145,7 +145,7 @@ export async function getDeliveryQuote(
   }
 
   // 4. Default fallback fee if within range but not in defined tiers
-  const fallbackFee = Number(outlet.delivery_fee) || 10000;
+  const fallbackFee = 10000;
   return {
     isDeliverable: true,
     distanceKm,
