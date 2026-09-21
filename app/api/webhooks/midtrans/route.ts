@@ -40,8 +40,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const orders =
-    await sql`select * from orders where order_number = ${order_id} limit 1`;
+  // Ekstrak base order number (contoh: ERC-20260921-9679-1726904123 -> ERC-20260921-9679)
+  const baseOrderNumberMatch = String(order_id).match(/^(ERC-\d+-\d+)/);
+  const targetOrderNumber = baseOrderNumberMatch ? baseOrderNumberMatch[1] : String(order_id);
+
+  const orders = await sql`
+    SELECT * FROM orders 
+    WHERE order_number = ${targetOrderNumber} OR order_number = ${String(order_id)}
+    LIMIT 1
+  `;
   const order = orders[0];
   if (!order)
     return NextResponse.json(

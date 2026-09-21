@@ -18,15 +18,19 @@ function serverKeyAuthHeader() {
  * Semua request & response dicatat ke payment_logs (poin 19).
  */
 export async function createSnapTransaction(order: {
-  id: string;
+  id: string | number;
   orderNumber: string;
   total: number;
   customerEmail?: string | null;
   customerPhone?: string | null;
 }) {
+  // Midtrans membutuhkan order_id yang unik untuk setiap kali create transaction.
+  // Tambahkan timestamp suffix agar customer bisa melakukan retry/lanjutkan pembayaran.
+  const uniqueAttemptOrderId = `${order.orderNumber}-${Date.now()}`;
+
   const body = {
     transaction_details: {
-      order_id: order.orderNumber, // Midtrans butuh order_id unik, bukan uuid internal
+      order_id: uniqueAttemptOrderId,
       gross_amount: order.total,
     },
     customer_details: {
@@ -37,7 +41,7 @@ export async function createSnapTransaction(order: {
     // tidak wajib breakdown per produk untuk keperluan sandbox testing.
     item_details: [
       {
-        id: order.id,
+        id: String(order.id),
         price: order.total,
         quantity: 1,
         name: `Order ${order.orderNumber}`,
@@ -74,6 +78,10 @@ export async function createSnapTransaction(order: {
   return data as { token: string; redirect_url: string };
 }
 
+const CORE_API_BASE_URL = IS_PRODUCTION
+  ? "https://api.midtrans.com/v2"
+  : "https://api.sandbox.midtrans.com/v2";
+
 /**
  * Verifikasi signature webhook Midtrans.
  * Formula resmi: SHA512(order_id + status_code + gross_amount + ServerKey)
@@ -94,3 +102,40 @@ export function verifyMidtransSignature(payload: {
     .digest("hex");
   return expected === payload.signature_key;
 }
+
+/**
+ * Cek status transaksi langsung ke API Midtrans (GET /v2/{order_id}/status).
+ */
+export async function checkMidtransTransactionStatus(orderIdOrAttemptId: string) {
+  const url = `${CORE_API_BASE_URL}/${encodeURIComponent(orderIdOrAttemptId)}/status`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: serverKeyAuthHeader(),
+    },
+  });
+
+  const data = await res.json();
+  return {
+    httpStatus: res.status,
+    ok: res.ok,
+    data: data as {
+      status_code?: string;
+      status_message?: string;
+      transaction_id?: string;
+      order_id?: string;
+      gross_amount?: string;
+      payment_type?: string;
+      transaction_time?: string;
+      transaction_status?: string;
+      fraud_status?: string;
+      signature_key?: string;
+      [key: string]: any;
+    },
+  };
+}
+
+
