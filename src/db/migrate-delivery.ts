@@ -7,6 +7,8 @@ async function run() {
   // 1. Add columns to outlets
   await sql`
     ALTER TABLE "outlets" 
+    ADD COLUMN IF NOT EXISTS "delivery_fee" INTEGER DEFAULT 10000 NOT NULL,
+    ADD COLUMN IF NOT EXISTS "phone" TEXT,
     ADD COLUMN IF NOT EXISTS "max_delivery_distance_km" NUMERIC(5, 2) DEFAULT 10.00 NOT NULL,
     ADD COLUMN IF NOT EXISTS "is_delivery_enabled" BOOLEAN DEFAULT true NOT NULL;
   `;

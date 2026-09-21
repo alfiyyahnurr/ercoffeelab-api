@@ -40,7 +40,7 @@ categories ──── products
 ### Outlet & Menu
 | Tabel | Kolom penting | Catatan |
 |---|---|---|
-| `outlets` | id, name, address, open_hour, close_hour, is_open, latitude, longitude | |
+| `outlets` | id, name, address, phone, open_hour, close_hour, is_open, latitude, longitude, delivery_fee, max_delivery_distance_km, is_delivery_enabled | |
 | `categories` | id, name, group_name | |
 | `products` | id, category_id, name, base_price, description, rating, is_bestseller, is_new | Master GLOBAL |
 | `product_addons` | id, product_id, name, extra_price, is_popular | |

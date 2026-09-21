@@ -3,6 +3,7 @@ export function formatOutlet(row: any) {
     id: Number(row.id),
     name: row.name,
     address: row.address,
+    phone: row.phone ?? null,
     openHour: row.open_hour ?? null,
     closeHour: row.close_hour ?? null,
     isOpen: Boolean(row.is_open),

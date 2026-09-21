@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS "outlets" (
     "id" BIGSERIAL PRIMARY KEY NOT NULL,
     "name" TEXT NOT NULL,
     "address" TEXT NOT NULL,
+    "phone" TEXT,
     "open_hour" TIME,
     "close_hour" TIME,
     "is_open" BOOLEAN DEFAULT true NOT NULL,

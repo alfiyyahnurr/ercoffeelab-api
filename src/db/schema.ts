@@ -61,6 +61,7 @@ export const outlets = pgTable("outlets", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
   address: text("address").notNull(),
+  phone: text("phone"),
   openHour: time("open_hour"),
   closeHour: time("close_hour"),
   isOpen: boolean("is_open").notNull().default(true),
