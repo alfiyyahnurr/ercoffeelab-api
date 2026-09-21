@@ -22,9 +22,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "orderId wajib diisi" }, { status: 400 });
 
   const orders = await sql`
-    select o.*, c.email as customer_email, c.phone as customer_phone
+    select o.*, c.email as customer_email, c.phone as customer_phone, pm.code as payment_method_code
     from orders o
     join customers c on c.id = o.customer_id
+    left join payment_methods pm on pm.id = o.payment_method_id
     where o.id = ${orderId} and o.customer_id = ${auth.payload.sub}
     limit 1
   `;
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       total: order.total,
       customerEmail: order.customer_email,
       customerPhone: order.customer_phone,
+      paymentMethodCode: order.payment_method_code,
     });
     return NextResponse.json({
       snapToken: snap.token,

@@ -19,9 +19,9 @@ import { sendNotification } from "@/lib/notifications";
  * /api/payments/midtrans/charge + webhook asli, BUKAN endpoint ini.
  */
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.MIDTRANS_IS_PRODUCTION === "true") {
     return NextResponse.json(
-      { error: "Endpoint simulasi dinonaktifkan di production" },
+      { error: "Endpoint simulasi dinonaktifkan di environment production Midtrans" },
       { status: 403 },
     );
   }

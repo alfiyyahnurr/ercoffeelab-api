@@ -13,6 +13,35 @@ function serverKeyAuthHeader() {
 }
 
 /**
+ * Pemetaan kode payment method dari database ke opsi enabled_payments Midtrans Snap.
+ */
+function getEnabledPayments(code?: string | null): string[] | undefined {
+  if (!code) return undefined;
+  const c = code.toLowerCase().trim();
+
+  // QRIS / E-Wallet
+  if (c === "qris") return ["qris", "gopay", "shopeepay", "other_qris"];
+  if (c === "gopay") return ["gopay", "qris"];
+  if (c === "shopeepay") return ["shopeepay", "qris"];
+
+  // Bank Transfer / Virtual Account
+  if (c === "bank_transfer" || c === "va") {
+    return ["bca_va", "bni_va", "bri_va", "permata_va", "echannel", "other_va"];
+  }
+  if (c === "bca_va") return ["bca_va"];
+  if (c === "bni_va") return ["bni_va"];
+  if (c === "bri_va") return ["bri_va"];
+  if (c === "mandiri_va" || c === "echannel") return ["echannel"];
+  if (c === "permata_va") return ["permata_va"];
+  if (c === "cimb_va") return ["cimb_va"];
+
+  // Credit / Debit Card
+  if (c === "credit_card" || c === "cc") return ["credit_card"];
+
+  return undefined;
+}
+
+/**
  * Buat transaksi Snap (dapat snap_token + redirect_url).
  * Selalu mengarah ke Midtrans SANDBOX kecuali MIDTRANS_IS_PRODUCTION=true di .env.
  * Semua request & response dicatat ke payment_logs (poin 19).
@@ -23,12 +52,14 @@ export async function createSnapTransaction(order: {
   total: number;
   customerEmail?: string | null;
   customerPhone?: string | null;
+  paymentMethodCode?: string | null;
 }) {
   // Midtrans membutuhkan order_id yang unik untuk setiap kali create transaction.
   // Tambahkan timestamp suffix agar customer bisa melakukan retry/lanjutkan pembayaran.
   const uniqueAttemptOrderId = `${order.orderNumber}-${Date.now()}`;
+  const enabledPayments = getEnabledPayments(order.paymentMethodCode);
 
-  const body = {
+  const body: Record<string, any> = {
     transaction_details: {
       order_id: uniqueAttemptOrderId,
       gross_amount: order.total,
@@ -48,6 +79,10 @@ export async function createSnapTransaction(order: {
       },
     ],
   };
+
+  if (enabledPayments && enabledPayments.length > 0) {
+    body.enabled_payments = enabledPayments;
+  }
 
   await sql`
     insert into payment_logs (order_id, direction, provider, payload)
