@@ -5,17 +5,27 @@ import { formatOutlet } from "../utils";
 
 /**
  * PATCH /api/outlets/:id
- * Super Admin only — Update data outlet
+ * Super Admin or Outlet Admin (scoped to own outlet) — Update data outlet
  */
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const auth = await requireStaff(req, ["super_admin"]);
+  const auth = await requireStaff(req, ["super_admin", "outlet_admin"]);
   if ("error" in auth) return auth.error;
 
-  const existingRows = await sql`SELECT * FROM outlets WHERE id = ${id}`;
+  const outletId = Number(id);
+
+  // Scoped authorization for outlet_admin
+  if (auth.payload.role === "outlet_admin" && Number(auth.payload.outletId) !== outletId) {
+    return NextResponse.json(
+      { error: "Admin outlet hanya dapat mengelola data cabangnya sendiri" },
+      { status: 403 },
+    );
+  }
+
+  const existingRows = await sql`SELECT * FROM outlets WHERE id = ${outletId}`;
   const existing = existingRows[0];
 
   if (!existing) {
@@ -32,7 +42,6 @@ export async function PATCH(
   const openHour = body.openHour !== undefined ? body.openHour : existing.open_hour;
   const closeHour = body.closeHour !== undefined ? body.closeHour : existing.close_hour;
   const isOpen = body.isOpen !== undefined ? Boolean(body.isOpen) : existing.is_open;
-  const deliveryFee = body.deliveryFee !== undefined ? Number(body.deliveryFee) : (existing.delivery_fee ?? 10000);
   const maxDeliveryDistanceKm = body.maxDeliveryDistanceKm !== undefined ? Number(body.maxDeliveryDistanceKm) : (existing.max_delivery_distance_km ?? 10);
   const isDeliveryEnabled = body.isDeliveryEnabled !== undefined ? Boolean(body.isDeliveryEnabled) : (existing.is_delivery_enabled ?? true);
   const latitude =
@@ -65,10 +74,9 @@ export async function PATCH(
       is_open = ${isOpen},
       latitude = ${latitude},
       longitude = ${longitude},
-      delivery_fee = ${deliveryFee},
       max_delivery_distance_km = ${maxDeliveryDistanceKm},
       is_delivery_enabled = ${isDeliveryEnabled}
-    WHERE id = ${id}
+    WHERE id = ${outletId}
     RETURNING *
   `;
 

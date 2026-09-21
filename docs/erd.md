@@ -40,7 +40,8 @@ categories ──── products
 ### Outlet & Menu
 | Tabel | Kolom penting | Catatan |
 |---|---|---|
-| `outlets` | id, name, address, open_hour, close_hour, is_open, latitude, longitude | |
+| `outlets` | id, name, address, open_hour, close_hour, is_open, latitude, longitude, max_delivery_distance_km, is_delivery_enabled | Cabang toko & konfigurasi batas radius delivery |
+| `delivery_tiers` | id, outlet_id, min_distance_km, max_distance_km, fee, is_active, created_at | Aturan tarif bertingkat biaya delivery per kilometer (outlet_id null = default global) |
 | `categories` | id, name, group_name | |
 | `products` | id, category_id, name, base_price, description, rating, is_bestseller, is_new | Master GLOBAL |
 | `product_addons` | id, product_id, name, extra_price, is_popular | |
