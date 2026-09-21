@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS "outlets" (
     "is_open" BOOLEAN DEFAULT true NOT NULL,
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
+    "delivery_fee" INTEGER DEFAULT 10000 NOT NULL,
     "max_delivery_distance_km" NUMERIC(5, 2) DEFAULT 10.00 NOT NULL,
     "is_delivery_enabled" BOOLEAN DEFAULT true NOT NULL
 );

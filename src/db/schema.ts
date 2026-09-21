@@ -66,6 +66,7 @@ export const outlets = pgTable("outlets", {
   isOpen: boolean("is_open").notNull().default(true),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  deliveryFee: integer("delivery_fee").notNull().default(10000),
   maxDeliveryDistanceKm: numeric("max_delivery_distance_km", { precision: 5, scale: 2 }).notNull().default("10.00"),
   isDeliveryEnabled: boolean("is_delivery_enabled").notNull().default(true),
 });
