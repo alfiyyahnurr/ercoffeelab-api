@@ -397,6 +397,16 @@ export async function GET(req: Request) {
         : filterOutletParam ? Number(filterOutletParam) : null
       : null;
   const statusFilter = filterStatusParam?.trim() || null;
+  let targetStatuses: string[] | null = null;
+  if (statusFilter && statusFilter !== 'all') {
+    if (statusFilter === 'pending') {
+      targetStatuses = ['pending', 'confirmed', 'paid', 'checkout'];
+    } else if (statusFilter === 'ready') {
+      targetStatuses = ['ready', 'on_delivery'];
+    } else {
+      targetStatuses = [statusFilter];
+    }
+  }
 
   const rows = await sql`
     SELECT 
@@ -426,7 +436,7 @@ export async function GET(req: Request) {
     LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
     WHERE (${customerFilter}::bigint IS NULL OR o.customer_id = ${customerFilter}::bigint)
       AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
-      AND (${statusFilter}::text IS NULL OR o.order_status = ${statusFilter}::text)
+      AND (${targetStatuses}::text[] IS NULL OR o.order_status = ANY(${targetStatuses}))
     ORDER BY o.created_at DESC
   `;
 
