@@ -56,11 +56,16 @@ export async function POST(req: Request) {
     );
   }
 
+  const normalizedOutletId =
+    staff.outlet_id !== null && staff.outlet_id !== undefined
+      ? Number(staff.outlet_id)
+      : null;
+
   const token = await signToken({
     sub: staff.id,
     type: "staff",
     role: staff.role,
-    outletId: staff.outlet_id,
+    outletId: normalizedOutletId,
     fullName: staff.full_name,
     email: staff.email,
   });
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
       email: staff.email,
       fullName: staff.full_name,
       role: staff.role,
-      outletId: staff.outlet_id,
+      outletId: normalizedOutletId,
     },
   });
 }

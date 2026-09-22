@@ -34,7 +34,7 @@ export async function PATCH(
   // Scoped check untuk outlet_admin
   if (
     auth.payload.role === "outlet_admin" &&
-    existingOrder.outlet_id !== auth.payload.outletId
+    Number(existingOrder.outlet_id) !== Number(auth.payload.outletId)
   ) {
     return NextResponse.json(
       { error: "Tidak mempunyai akses ke order ini" },

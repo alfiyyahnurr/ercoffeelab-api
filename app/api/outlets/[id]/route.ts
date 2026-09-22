@@ -23,7 +23,7 @@ export async function PATCH(
 
     // outlet_admin can only manage their own outlet
     if (auth.payload.role === "outlet_admin") {
-      if (auth.payload.outletId !== outletId) {
+      if (Number(auth.payload.outletId) !== outletId) {
         return NextResponse.json(
           { error: "Admin outlet hanya dapat mengelola data cabangnya sendiri" },
           { status: 403 },

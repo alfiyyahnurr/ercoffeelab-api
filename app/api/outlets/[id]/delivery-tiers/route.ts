@@ -73,7 +73,7 @@ export async function POST(
 
   // Scoped authorization for outlet_admin
   if (auth.payload.role === "outlet_admin") {
-    if (isGlobal || auth.payload.outletId !== outletId) {
+    if (isGlobal || Number(auth.payload.outletId) !== outletId) {
       return NextResponse.json(
         { error: "Admin outlet hanya dapat mengelola tier cabangnya sendiri" },
         { status: 403 },
@@ -138,7 +138,7 @@ export async function PUT(
   const outletId = isGlobal ? null : Number(id);
 
   if (auth.payload.role === "outlet_admin") {
-    if (isGlobal || auth.payload.outletId !== outletId) {
+    if (isGlobal || Number(auth.payload.outletId) !== outletId) {
       return NextResponse.json(
         { error: "Admin outlet hanya dapat mengelola tier cabangnya sendiri" },
         { status: 403 },
@@ -228,7 +228,7 @@ export async function DELETE(
   const outletId = isGlobal ? null : Number(id);
 
   if (auth.payload.role === "outlet_admin") {
-    if (isGlobal || auth.payload.outletId !== outletId) {
+    if (isGlobal || Number(auth.payload.outletId) !== outletId) {
       return NextResponse.json(
         { error: "Admin outlet hanya dapat mengelola tier cabangnya sendiri" },
         { status: 403 },

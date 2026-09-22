@@ -65,11 +65,16 @@ export async function GET(req: Request) {
 
   await sql`update staff_users set sso_provider = 'google', sso_subject = ${profile.id} where id = ${staff.id}`;
 
+  const normalizedOutletId =
+    staff.outlet_id !== null && staff.outlet_id !== undefined
+      ? Number(staff.outlet_id)
+      : null;
+
   const token = await signToken({
     sub: staff.id,
     type: "staff",
     role: staff.role,
-    outletId: staff.outlet_id,
+    outletId: normalizedOutletId,
   });
 
   if (adminPanelUrl) {

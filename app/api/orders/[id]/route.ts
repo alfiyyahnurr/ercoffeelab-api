@@ -72,7 +72,7 @@ export async function GET(
   if (
     auth.userType === "staff" &&
     auth.payload.role === "outlet_admin" &&
-    order.outlet_id !== auth.payload.outletId
+    Number(order.outlet_id) !== Number(auth.payload.outletId)
   ) {
     return NextResponse.json(
       { error: "Tidak mempunyai akses ke order ini" },

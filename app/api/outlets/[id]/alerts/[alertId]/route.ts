@@ -15,7 +15,7 @@ export async function PATCH(
   const auth = await requireStaff(req);
   if ("error" in auth) return auth.error;
 
-  if (auth.payload.role === "outlet_admin" && auth.payload.outletId !== id) {
+  if (auth.payload.role === "outlet_admin" && Number(auth.payload.outletId) !== Number(id)) {
     return NextResponse.json(
       { error: "Tidak mempunyai akses ke outlet ini" },
       { status: 403 },
