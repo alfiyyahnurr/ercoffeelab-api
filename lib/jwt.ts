@@ -24,11 +24,43 @@ export type StaffTokenPayload = {
 
 export type TokenPayload = CustomerTokenPayload | StaffTokenPayload;
 
-export async function signToken(payload: TokenPayload, expiresIn = "30d") {
+/**
+ * Menghitung waktu Unix timestamp (dalam detik) tepat pada pergantian hari (00:00:00 WIB / Asia/Jakarta).
+ * Waktu Indonesia Barat (WIB) adalah UTC+7.
+ */
+export function getMidnightWibExpirationSeconds(): number {
+  const now = new Date();
+  // Waktu saat ini dalam UTC milliseconds
+  const utcMillis = now.getTime() + now.getTimezoneOffset() * 60000;
+  // Waktu saat ini dalam WIB (UTC+7)
+  const wibDate = new Date(utcMillis + 7 * 3600000);
+
+  // Set ke jam 00:00:00 hari berikutnya (besok) dalam zona WIB
+  const nextMidnightWib = new Date(wibDate);
+  nextMidnightWib.setDate(nextMidnightWib.getDate() + 1);
+  nextMidnightWib.setHours(0, 0, 0, 0);
+
+  // Konversi kembali ke UTC timestamp
+  const expirationUtc = new Date(nextMidnightWib.getTime() - 7 * 3600000);
+  return Math.floor(expirationUtc.getTime() / 1000);
+}
+
+export async function signToken(
+  payload: TokenPayload,
+  expiresIn?: string | number,
+) {
+  // Untuk staff: default berlaku 1 hari kalender (berakhir tepat jam 00:00 WIB pergantian hari)
+  const finalExpiry =
+    expiresIn !== undefined
+      ? expiresIn
+      : payload.type === "staff"
+        ? getMidnightWibExpirationSeconds()
+        : "30d";
+
   return new SignJWT({ ...payload, sub: String(payload.sub) })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(expiresIn)
+    .setExpirationTime(finalExpiry)
     .sign(secret);
 }
 
