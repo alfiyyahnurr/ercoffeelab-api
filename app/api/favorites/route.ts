@@ -28,26 +28,28 @@ export async function GET(req: Request) {
     ORDER BY f.created_at DESC
   `;
 
-  const productIds = favRows.map((r: any) => r.product_id);
+  const productIds = favRows.map((r: any) => Number(r.product_id));
   let addonMap: Record<number, any[]> = {};
 
   if (productIds.length > 0) {
+    const rawIds = favRows.map((r: any) => r.product_id);
     const addons = await sql`
       SELECT id, product_id, name, extra_price, is_popular
       FROM product_addons
-      WHERE product_id = ANY(${productIds})
+      WHERE product_id = ANY(${rawIds})
       ORDER BY name ASC
     `;
     addons.forEach((a: any) => {
-      if (!addonMap[a.product_id]) addonMap[a.product_id] = [];
-      addonMap[a.product_id].push(a);
+      const pid = Number(a.product_id);
+      if (!addonMap[pid]) addonMap[pid] = [];
+      addonMap[pid].push(a);
     });
   }
 
   const data = favRows.map((r: any) => ({
-    favId: r.fav_id,
-    productId: r.product_id,
-    product: formatProduct(r, addonMap[r.product_id] || []),
+    favId: Number(r.fav_id),
+    productId: Number(r.product_id),
+    product: formatProduct(r, addonMap[Number(r.product_id)] || []),
   }));
 
   return NextResponse.json({ data, productIds });

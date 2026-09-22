@@ -90,14 +90,14 @@ export async function GET(
   }
 
   const data = menuRows.map((row) => ({
-    id: row.id,
+    id: Number(row.id),
     name: row.name,
     description: row.description ?? null,
     basePrice: Number(row.base_price),
     price: Number(row.price),
     priceOverride: row.price_override !== null && row.price_override !== undefined ? Number(row.price_override) : null,
     category: row.category_name ?? null,
-    categoryId: row.category_id,
+    categoryId: row.category_id ? Number(row.category_id) : null,
     categoryName: row.category_name ?? null,
     categoryGroup: row.category_group_name ?? null,
     type: row.type,
@@ -108,7 +108,7 @@ export async function GET(
     imageUrl: row.image_url ?? null,
     isAvailable: Boolean(row.is_available),
     stockNote: row.stock_note ?? null,
-    addons: addonsByProduct.get(row.id) || [],
+    addons: addonsByProduct.get(String(row.id)) || [],
   }));
 
 
