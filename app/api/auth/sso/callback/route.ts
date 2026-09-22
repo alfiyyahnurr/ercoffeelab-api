@@ -16,14 +16,17 @@ import { signToken } from "@/lib/jwt";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const appUrl = process.env.APP_URL;
+  const rawAppUrl = process.env.APP_URL || new URL(req.url).origin;
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const adminPanelUrl = process.env.ADMIN_PANEL_URL; // mis. http://localhost:5173
+  const rawAdminPanelUrl = process.env.ADMIN_PANEL_URL; // mis. http://localhost:5173
 
-  if (!code || !appUrl || !clientId || !clientSecret) {
+  if (!code || !rawAppUrl || !clientId || !clientSecret) {
     return NextResponse.json({ error: "SSO belum dikonfigurasi lengkap" }, { status: 500 });
   }
+
+  const appUrl = rawAppUrl.replace(/\/+$/, "");
+  const adminPanelUrl = rawAdminPanelUrl ? rawAdminPanelUrl.replace(/\/+$/, "") : null;
 
   // Tukar authorization code jadi access token
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
