@@ -63,7 +63,19 @@ export async function POST(req: Request) {
       RETURNING *
     `;
 
-    return NextResponse.json(formatOutlet(rows[0]), { status: 201 });
+    const newOutlet = rows[0];
+
+    // Inisialisasi otomatis product_outlets untuk seluruh produk master yang sudah ada
+    const productRows = await sql`SELECT id FROM products`;
+    for (const prod of productRows) {
+      await sql`
+        INSERT INTO product_outlets (product_id, outlet_id, is_available, price_override)
+        VALUES (${prod.id}, ${newOutlet.id}, true, null)
+        ON CONFLICT (product_id, outlet_id) DO NOTHING
+      `;
+    }
+
+    return NextResponse.json(formatOutlet(newOutlet), { status: 201 });
   } catch (err: any) {
     console.error("POST /api/outlets error:", err);
     return NextResponse.json(

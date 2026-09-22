@@ -1,10 +1,14 @@
 export function formatAddon(row: any) {
+  const rawExtraPrice = row.extra_price !== undefined ? row.extra_price : row.extraPrice;
+  const rawIsPopular = row.is_popular !== undefined ? row.is_popular : row.isPopular;
+  const rawProductId = row.product_id !== undefined ? row.product_id : row.productId;
+
   return {
-    id: Number(row.id),
-    productId: Number(row.product_id),
-    name: row.name,
-    extraPrice: Number(row.extra_price),
-    isPopular: Boolean(row.is_popular),
+    id: row.id !== undefined && row.id !== null ? Number(row.id) : undefined,
+    productId: rawProductId !== undefined && rawProductId !== null ? Number(rawProductId) : undefined,
+    name: row.name || '',
+    extraPrice: typeof rawExtraPrice === 'number' && !isNaN(rawExtraPrice) ? Number(rawExtraPrice) : 0,
+    isPopular: Boolean(rawIsPopular),
   };
 }
 

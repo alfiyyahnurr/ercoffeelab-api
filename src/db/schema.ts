@@ -98,6 +98,7 @@ export const products = pgTable("products", {
   rating: numeric("rating", { precision: 2, scale: 1 }).default("0"),
   ratingCount: integer("rating_count").default(0),
   isBestseller: boolean("is_bestseller").default(false),
+  isNew: boolean("is_new").default(false),
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

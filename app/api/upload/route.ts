@@ -69,18 +69,10 @@ export async function POST(req: Request) {
       fs.writeFileSync(filePath, buffer);
       publicUrl = `/uploads/products/${uniqueFileName}`;
     } catch (writeErr: any) {
-      // Fallback untuk Lingkungan Read-Only Serverless (Vercel / AWS Lambda / /var/task)
-      if (
-        writeErr?.code === "EROFS" ||
-        writeErr?.code === "EACCES" ||
-        writeErr?.message?.includes("read-only") ||
-        writeErr?.message?.includes("EROFS")
-      ) {
-        const base64 = buffer.toString("base64");
-        publicUrl = `data:${file.type};base64,${base64}`;
-      } else {
-        throw writeErr;
-      }
+      // Universal fallback untuk seluruh lingkungan serverless read-only / Vercel / Cloud Functions
+      console.warn("Disk write unavailable, falling back to Base64 Data URI:", writeErr?.message);
+      const base64 = buffer.toString("base64");
+      publicUrl = `data:${file.type};base64,${base64}`;
     }
 
     return NextResponse.json(
