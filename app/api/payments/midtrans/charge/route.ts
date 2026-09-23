@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/src/db/client";
 import { requireCustomer } from "@/lib/auth-middleware";
-import { createSnapTransaction } from "@/lib/midtrans";
+import { createDirectPaymentCharge } from "@/lib/midtrans";
 
 /**
  * POST /api/payments/midtrans/charge
- * body: { orderId }
+ * body: { orderId, bank? }
  *
- * Buat transaksi Snap ke Midtrans SANDBOX (bukan production — lihat lib/midtrans.ts).
- * Mobile app buka snap_token/redirect_url di WebView, lalu bayar pakai
- * data dummy sandbox Midtrans (nomor kartu test, dsb — lihat docs/navigation-flow.md
- * untuk daftar data dummy resmi Midtrans).
+ * Buat transaksi pembayaran Midtrans dengan dukungan Direct Core API (GoPay, ShopeePay, Bank VA, QRIS)
+ * serta Snap fallback. Mengembalikan parameter deeplinkUrl, qrUrl, vaNumber, snapToken dsb.
  */
 export async function POST(req: Request) {
   const auth = await requireCustomer(req);
@@ -18,6 +16,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const orderId = body?.orderId;
+  const bank = body?.bank;
   if (!orderId)
     return NextResponse.json({ error: "orderId wajib diisi" }, { status: 400 });
 
@@ -43,17 +42,30 @@ export async function POST(req: Request) {
   }
 
   try {
-    const snap = await createSnapTransaction({
+    const charge = await createDirectPaymentCharge({
       id: order.id,
       orderNumber: order.order_number,
       total: order.total,
       customerEmail: order.customer_email,
       customerPhone: order.customer_phone,
       paymentMethodCode: order.payment_method_code,
+      bank: bank,
     });
+
     return NextResponse.json({
-      snapToken: snap.token,
-      redirectUrl: snap.redirect_url,
+      orderId: charge.orderId,
+      orderNumber: charge.orderNumber,
+      paymentType: charge.paymentType,
+      snapToken: charge.snapToken,
+      redirectUrl: charge.redirectUrl,
+      deeplinkUrl: charge.deeplinkUrl,
+      qrUrl: charge.qrUrl,
+      qrString: charge.qrString,
+      vaNumber: charge.vaNumber,
+      bankName: charge.bankName,
+      billerCode: charge.billerCode,
+      billKey: charge.billKey,
+      expiryTime: charge.expiryTime,
     });
   } catch (err) {
     return NextResponse.json(
@@ -62,3 +74,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
