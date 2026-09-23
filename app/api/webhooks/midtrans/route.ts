@@ -3,15 +3,11 @@ import { sql } from "@/src/db/client";
 import { verifyMidtransSignature } from "@/lib/midtrans";
 import { recalculateLoyaltyTier } from "@/lib/loyalty";
 import { sendNotification } from "@/lib/notifications";
+import { commitPaidOrderFromDraft } from "@/lib/checkout";
 
 /**
  * POST /api/webhooks/midtrans
- * Dipanggil OTOMATIS oleh Midtrans (sandbox atau production) setiap status
- * transaksi berubah. TIDAK pakai JWT — otentikasi lewat signature_key.
- *
- * Set URL ini di dashboard.sandbox.midtrans.com > Settings > Configuration >
- * "Payment Notification URL": https://<domain-kamu>/api/webhooks/midtrans
- * (pas development lokal, pakai tunnel seperti ngrok supaya Midtrans bisa reach localhost)
+ * Dipanggil OTOMATIS oleh Midtrans (sandbox atau production) setiap status transaksi berubah.
  */
 export async function POST(req: Request) {
   const payload = await req.json().catch(() => null);
@@ -44,26 +40,32 @@ export async function POST(req: Request) {
   const baseOrderNumberMatch = String(order_id).match(/^(ERC-\d+-\d+)/);
   const targetOrderNumber = baseOrderNumberMatch ? baseOrderNumberMatch[1] : String(order_id);
 
+  const isPaid =
+    (transaction_status === "capture" && fraud_status === "accept") ||
+    transaction_status === "settlement";
+
+  // Cek apakah order sudah ada di tabel orders
   const orders = await sql`
     SELECT * FROM orders 
     WHERE order_number = ${targetOrderNumber} OR order_number = ${String(order_id)}
     LIMIT 1
   `;
-  const order = orders[0];
-  if (!order)
-    return NextResponse.json(
-      { error: "Order tidak ditemukan" },
-      { status: 404 },
-    );
+  let order: Record<string, any> | null = orders[0] || null;
 
+  // Jika belum ada di orders tapi statusnya PAID/Settlement, commit dari draft!
+  if (!order && isPaid) {
+    order = await commitPaidOrderFromDraft(targetOrderNumber);
+  }
+
+  // Catat payment log
   await sql`
-    insert into payment_logs (order_id, direction, provider, payload)
-    values (${order.id}, 'webhook', 'midtrans', ${JSON.stringify(payload)})
+    insert into payment_logs (order_id, order_number, direction, provider, payload)
+    values (${order?.id || null}, ${targetOrderNumber}, 'webhook', 'midtrans', ${JSON.stringify(payload)})
   `;
 
-  const isPaid =
-    (transaction_status === "capture" && fraud_status === "accept") ||
-    transaction_status === "settlement";
+  if (!order) {
+    return NextResponse.json({ status: "ok", message: "Draft pending or expired" });
+  }
 
   if (isPaid && order.payment_status !== "paid") {
     await sql`
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ status: "ok", paid: true, loyalty: result });
+    return NextResponse.json({ status: "ok", paid: true, orderId: order.id, loyalty: result });
   }
 
   if (
@@ -104,9 +106,14 @@ export async function POST(req: Request) {
     transaction_status === "expire" ||
     transaction_status === "deny"
   ) {
-    await sql`update orders set order_status = 'cancelled' where id = ${order.id}`;
-    await sql`insert into order_status_logs (order_id, status) values (${order.id}, 'cancelled')`;
+    if (order) {
+      await sql`update orders set order_status = 'cancelled' where id = ${order.id}`;
+      await sql`insert into order_status_logs (order_id, status) values (${order.id}, 'cancelled')`;
+    }
+    // Hapus draft jika ada
+    await sql`DELETE FROM payment_drafts WHERE order_number = ${targetOrderNumber}`;
   }
 
-  return NextResponse.json({ status: "ok", paid: false });
+  return NextResponse.json({ status: "ok", paid: isPaid, orderId: order?.id });
 }
+

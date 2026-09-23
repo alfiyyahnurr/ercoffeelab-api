@@ -144,11 +144,34 @@ export const paymentMethods = pgTable("payment_methods", {
 
 export const paymentLogs = pgTable("payment_logs", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
-  orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id),
+  orderId: bigint("order_id", { mode: "number" }).references(() => orders.id), // nullable for draft stage
+  orderNumber: text("order_number"),
   direction: text("direction").notNull(), // 'request' | 'response' | 'webhook'
   provider: text("provider").notNull().default("midtrans"),
   payload: jsonb("payload").notNull(),
   httpStatus: integer("http_status"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const paymentDrafts = pgTable("payment_drafts", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  customerId: bigint("customer_id", { mode: "number" }).notNull().references(() => customers.id),
+  outletId: bigint("outlet_id", { mode: "number" }).notNull().references(() => outlets.id),
+  fulfillmentType: text("fulfillment_type").notNull(), // 'pickup' | 'delivery'
+  deliveryAddress: text("delivery_address"),
+  deliveryFee: integer("delivery_fee").notNull().default(0),
+  deliveryDistanceKm: numeric("delivery_distance_km", { precision: 5, scale: 2 }),
+  deliveryLatitude: doublePrecision("delivery_latitude"),
+  deliveryLongitude: doublePrecision("delivery_longitude"),
+  paymentMethodId: bigint("payment_method_id", { mode: "number" }).notNull().references(() => paymentMethods.id),
+  subtotal: integer("subtotal").notNull(),
+  discount: integer("discount").notNull().default(0),
+  voucherId: bigint("voucher_id", { mode: "number" }).references(() => vouchers.id),
+  serviceFee: integer("service_fee").notNull().default(2000),
+  total: integer("total").notNull(),
+  itemsJson: jsonb("items_json").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -58,7 +58,8 @@ categories ──── products
 | Tabel | Kolom penting | Catatan |
 |---|---|---|
 | `payment_methods` | id, code, display_name, provider, is_active, outlet_id | outlet_id null = global |
-| `payment_logs` | id, order_id, direction, provider, payload (jsonb), http_status | direction: request\|response\|webhook |
+| `payment_drafts` | id, order_number, customer_id, outlet_id, fulfillment_type, delivery_address, delivery_fee, delivery_distance_km, delivery_latitude, delivery_longitude, payment_method_id, subtotal, discount, voucher_id, service_fee, total, items_json, expires_at | Draft checkout session sementara sebelum pembayaran diselesaikan/lunas |
+| `payment_logs` | id, order_id, order_number, direction, provider, payload (jsonb), http_status | direction: request\|response\|webhook (order_id nullable) |
 
 ### Voucher & Loyalty
 | Tabel | Kolom penting | Catatan |

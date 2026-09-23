@@ -434,12 +434,11 @@ export async function GET(req: Request) {
     LEFT JOIN customers c ON c.id = o.customer_id
     LEFT JOIN outlets out ON out.id = o.outlet_id
     LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
-    WHERE (${customerFilter}::bigint IS NULL OR o.customer_id = ${customerFilter}::bigint)
-      AND (${staffOutletFilter}::bigint IS NULL OR o.outlet_id = ${staffOutletFilter}::bigint)
+    WHERE (${customerFilter}::bigint IS NULL OR (o.customer_id = ${customerFilter}::bigint AND o.payment_status = 'paid'))
+      AND (${staffOutletFilter}::bigint IS NULL OR (o.outlet_id = ${staffOutletFilter}::bigint AND o.payment_status = 'paid'))
       AND (${targetStatuses}::text[] IS NULL OR o.order_status = ANY(${targetStatuses}))
     ORDER BY o.created_at DESC
   `;
-
 
   const data = rows.map((row: any) => formatOrder(row, [], []));
   return NextResponse.json({ data });

@@ -229,10 +229,34 @@ CREATE TABLE IF NOT EXISTS "outlet_order_alerts" (
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 
+-- Payment Drafts: Temporary session before payment is completed
+CREATE TABLE IF NOT EXISTS "payment_drafts" (
+    "id" BIGSERIAL PRIMARY KEY NOT NULL,
+    "order_number" TEXT NOT NULL UNIQUE,
+    "customer_id" BIGINT NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
+    "outlet_id" BIGINT NOT NULL REFERENCES "outlets"("id") ON DELETE CASCADE,
+    "fulfillment_type" TEXT NOT NULL, -- 'pickup' | 'delivery'
+    "delivery_address" TEXT,
+    "delivery_fee" INTEGER DEFAULT 0 NOT NULL,
+    "delivery_distance_km" NUMERIC(5, 2),
+    "delivery_latitude" DOUBLE PRECISION,
+    "delivery_longitude" DOUBLE PRECISION,
+    "payment_method_id" BIGINT NOT NULL REFERENCES "payment_methods"("id"),
+    "subtotal" INTEGER NOT NULL,
+    "discount" INTEGER DEFAULT 0 NOT NULL,
+    "voucher_id" BIGINT REFERENCES "vouchers"("id"),
+    "service_fee" INTEGER DEFAULT 2000 NOT NULL,
+    "total" INTEGER NOT NULL,
+    "items_json" JSONB NOT NULL,
+    "expires_at" TIMESTAMP WITH TIME ZONE NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
 -- Payment Logs: Midtrans request/response/webhook audit logs
 CREATE TABLE IF NOT EXISTS "payment_logs" (
     "id" BIGSERIAL PRIMARY KEY NOT NULL,
-    "order_id" BIGINT NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
+    "order_id" BIGINT REFERENCES "orders"("id") ON DELETE CASCADE, -- nullable for draft payments
+    "order_number" TEXT,
     "direction" TEXT NOT NULL, -- 'request' | 'response' | 'webhook'
     "provider" TEXT DEFAULT 'midtrans' NOT NULL,
     "payload" JSONB NOT NULL,

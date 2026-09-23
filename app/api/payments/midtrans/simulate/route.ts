@@ -2,21 +2,11 @@ import { NextResponse } from "next/server";
 import { sql } from "@/src/db/client";
 import { recalculateLoyaltyTier } from "@/lib/loyalty";
 import { sendNotification } from "@/lib/notifications";
+import { commitPaidOrderFromDraft } from "@/lib/checkout";
 
 /**
  * POST /api/payments/midtrans/simulate
- * body: { orderId, result: "success" | "failure" }
- *
- * ⚠️ DEV/DEMO ONLY — dinonaktifkan otomatis kalau NODE_ENV=production.
- *
- * Endpoint ini MELEWATI Midtrans sepenuhnya (tidak ada network call, tidak
- * perlu MIDTRANS_SERVER_KEY, tidak perlu ngrok/tunnel). Berguna untuk:
- * - Testing alur order→paid→loyalty→notifikasi tanpa akun Midtrans sandbox beneran
- * - Demo ke stakeholder tanpa perlu setup payment gateway asli
- *
- * Kalau MIDTRANS_SERVER_KEY sudah diisi dan mau tes jalur sungguhan (charge
- * real ke sandbox Midtrans + bayar pakai kartu test mereka), pakai
- * /api/payments/midtrans/charge + webhook asli, BUKAN endpoint ini.
+ * body: { orderId?, orderNumber?, result: "success" | "failure" }
  */
 export async function POST(req: Request) {
   if (process.env.MIDTRANS_IS_PRODUCTION === "true") {
@@ -28,21 +18,51 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const orderId = body?.orderId;
+  const orderNumber = body?.orderNumber || (typeof orderId === "string" && orderId.startsWith("ERC-") ? orderId : null);
   const result = body?.result === "failure" ? "failure" : "success";
 
-  if (!orderId)
-    return NextResponse.json({ error: "orderId wajib diisi" }, { status: 400 });
+  if (!orderId && !orderNumber)
+    return NextResponse.json({ error: "orderId atau orderNumber wajib diisi" }, { status: 400 });
 
-  const orders = await sql`select * from orders where id = ${orderId} limit 1`;
-  const order = orders[0];
-  if (!order)
+  let order: any = null;
+
+  // Cek apakah order sudah ada di tabel orders
+  if (orderId && !isNaN(Number(orderId))) {
+    const orders = await sql`select * from orders where id = ${orderId} limit 1`;
+    order = orders[0];
+  } else if (orderNumber) {
+    const orders = await sql`select * from orders where order_number = ${orderNumber} limit 1`;
+    order = orders[0];
+  }
+
+  // Jika order belum ada di tabel orders tapi result = success, commit dari draft!
+  if (!order && result === "success" && orderNumber) {
+    order = await commitPaidOrderFromDraft(orderNumber, true);
+  }
+
+  if (!order && result === "success") {
+    // Cari draft berdasarkan id jika orderId bukan number
+    const drafts = await sql`select * from payment_drafts where id::text = ${String(orderId)} or order_number = ${String(orderId)} limit 1`;
+    if (drafts[0]) {
+      order = await commitPaidOrderFromDraft(drafts[0].order_number, true);
+    }
+  }
+
+  if (!order && result === "failure") {
+    if (orderNumber) {
+      await sql`DELETE FROM payment_drafts WHERE order_number = ${orderNumber}`;
+    }
+    return NextResponse.json({ status: "ok", paid: false, simulated: true });
+  }
+
+  if (!order) {
     return NextResponse.json(
-      { error: "Order tidak ditemukan" },
+      { error: "Draft transaksi atau order tidak ditemukan" },
       { status: 404 },
     );
+  }
 
-  // Catat sebagai payment_logs walau ini simulasi — supaya dev bisa lihat histori yang sama
-  // seperti kalau webhook Midtrans asli yang masuk.
+  // Catat payment_logs
   const simulatedPayload = {
     order_id: order.order_number,
     transaction_status: result === "success" ? "settlement" : "deny",
@@ -50,14 +70,14 @@ export async function POST(req: Request) {
     simulated: true,
   };
   await sql`
-    insert into payment_logs (order_id, direction, provider, payload)
-    values (${order.id}, 'webhook', 'midtrans-simulate', ${JSON.stringify(simulatedPayload)})
+    insert into payment_logs (order_id, order_number, direction, provider, payload)
+    values (${order.id}, ${order.order_number}, 'webhook', 'midtrans-simulate', ${JSON.stringify(simulatedPayload)})
   `;
 
   if (result === "failure") {
     await sql`update orders set order_status = 'cancelled' where id = ${order.id}`;
     await sql`insert into order_status_logs (order_id, status) values (${order.id}, 'cancelled')`;
-    return NextResponse.json({ status: "ok", paid: false, simulated: true });
+    return NextResponse.json({ status: "ok", paid: false, simulated: true, orderId: order.id });
   }
 
   await sql`
@@ -92,6 +112,9 @@ export async function POST(req: Request) {
     status: "ok",
     paid: true,
     simulated: true,
+    orderId: order.id,
+    orderNumber: order.order_number,
     loyalty: loyaltyResult,
   });
 }
+

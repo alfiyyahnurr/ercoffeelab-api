@@ -39,8 +39,10 @@ Urutan pengerjaan disarankan top-to-bottom. Centang kalau selesai & sudah dites 
 - [x] `GET /api/payment-methods` (publik, hanya aktif) + versi admin (semua)
 - [x] `POST /api/payment-methods`, `PATCH /:id` (super_admin)
 
+- [x] `POST /api/payments/checkout-session` — inisiasi sesi draft pembayaran tanpa membuat record unpaid di orders
 - [x] `POST /api/payments/midtrans/charge` — real, ke Midtrans sandbox, catat payment_logs
-- [x] `POST /api/webhooks/midtrans` — verifikasi signature, update order, trigger loyalty+notif
+- [x] `POST /api/payments/midtrans/check-status` — sinkronisasi status real-time langsung ke Midtrans & commit draft
+- [x] `POST /api/webhooks/midtrans` — verifikasi signature, commit draft / update order, trigger loyalty+notif
 - [x] `POST /api/payments/midtrans/simulate` — **dev-only**, simulasi tanpa perlu akun Midtrans sungguhan
 - [x] `lib/midtrans.ts`, `lib/loyalty.ts`, `lib/notifications.ts` (stub, Fontee beneran di Fase 5)
 
