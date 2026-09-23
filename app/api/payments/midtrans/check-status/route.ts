@@ -58,22 +58,30 @@ export async function POST(req: Request) {
   }
 
   // 3. Kumpulkan kemungkinan Order ID / Attempt ID yang dikirim ke Midtrans
-  const targetOrderNumber = orderNumber || order?.order_number || String(orderId);
-  const candidates: string[] = [targetOrderNumber];
+  const rawIdString = String(orderNumber || orderId || "");
+  const baseMatch = rawIdString.match(/^(ERC-\d+-\d+)/);
+  const targetOrderNumber = baseMatch ? baseMatch[1] : (orderNumber || order?.order_number || String(orderId));
+  
+  const candidates: string[] = [];
+  const attemptIdParam = body?.attemptId;
+  if (attemptIdParam) candidates.push(attemptIdParam);
+  if (rawIdString && !candidates.includes(rawIdString)) candidates.push(rawIdString);
+  if (targetOrderNumber && !candidates.includes(targetOrderNumber)) candidates.push(targetOrderNumber);
 
   try {
     const logs = await sql`
       SELECT payload FROM payment_logs
-      WHERE (order_id = ${order?.id || null} OR order_number = ${targetOrderNumber}) AND provider = 'midtrans'
+      WHERE (order_id = ${order?.id || null} OR order_number = ${targetOrderNumber} OR order_number = ${rawIdString})
+        AND (provider LIKE 'midtrans%' OR provider = 'midtrans')
       ORDER BY created_at DESC
-      LIMIT 10
+      LIMIT 20
     `;
 
     for (const log of logs) {
       const payloadObj = typeof log.payload === "string" ? JSON.parse(log.payload) : log.payload;
-      const attemptId = payloadObj?.transaction_details?.order_id || payloadObj?.order_id;
-      if (attemptId && !candidates.includes(attemptId)) {
-        candidates.unshift(attemptId); // prioritaskan attempt terbaru
+      const logAttemptId = payloadObj?.transaction_details?.order_id || payloadObj?.order_id;
+      if (logAttemptId && !candidates.includes(logAttemptId)) {
+        candidates.unshift(logAttemptId); // prioritaskan attempt terbaru dari log
       }
     }
   } catch (e) {

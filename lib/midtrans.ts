@@ -58,6 +58,7 @@ export interface ChargeOrderInput {
 export interface DirectPaymentResult {
   orderId: string | number;
   orderNumber: string;
+  attemptId?: string;
   paymentType: string;
   snapToken?: string;
   redirectUrl?: string;
@@ -82,7 +83,7 @@ export async function createDirectPaymentCharge(
   const uniqueAttemptOrderId = `${order.orderNumber}-${Date.now()}`;
   const code = (order.paymentMethodCode || "").toLowerCase().trim();
   const bank = (order.bank || "").toLowerCase().trim();
-  const callbackUrl = `ercoffeelab://orders/${order.id}`;
+  const callbackUrl = `ercoffeelab://payment-callback?order_number=${order.orderNumber}`;
 
   // 1. Gopay Direct Core API
   if (code === "gopay") {
@@ -126,6 +127,7 @@ export async function createDirectPaymentCharge(
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        attemptId: uniqueAttemptOrderId,
         paymentType: "gopay",
         deeplinkUrl: deeplinkAction?.url,
         qrUrl: qrAction?.url,
@@ -173,6 +175,7 @@ export async function createDirectPaymentCharge(
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        attemptId: uniqueAttemptOrderId,
         paymentType: "shopeepay",
         deeplinkUrl: deeplinkAction?.url,
         expiryTime: data.expiry_time,
@@ -268,6 +271,7 @@ export async function createDirectPaymentCharge(
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        attemptId: uniqueAttemptOrderId,
         paymentType: "bank_transfer",
         vaNumber: vaNumber,
         bankName: bankName,
@@ -316,6 +320,7 @@ export async function createDirectPaymentCharge(
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        attemptId: uniqueAttemptOrderId,
         paymentType: "qris",
         qrUrl: qrAction?.url,
         qrString: data.qr_string,
@@ -330,6 +335,7 @@ export async function createDirectPaymentCharge(
   return {
     orderId: order.id,
     orderNumber: order.orderNumber,
+    attemptId: uniqueAttemptOrderId,
     paymentType: code || "snap",
     snapToken: snap.token,
     redirectUrl: snap.redirect_url,
@@ -344,9 +350,13 @@ async function logPayment(
   httpStatus?: number
 ) {
   try {
+    const isNum = typeof orderId === "number" || (!isNaN(Number(orderId)) && !String(orderId).startsWith("ERC-"));
+    const numericOrderId = isNum ? Number(orderId) : null;
+    const orderNumberStr = String(orderId);
+
     await sql`
-      insert into payment_logs (order_id, direction, provider, payload, http_status)
-      values (${orderId}, ${direction}, ${provider}, ${JSON.stringify(payload)}, ${httpStatus || null})
+      insert into payment_logs (order_id, order_number, direction, provider, payload, http_status)
+      values (${numericOrderId}, ${orderNumberStr}, ${direction}, ${provider}, ${JSON.stringify(payload)}, ${httpStatus || null})
     `;
   } catch (err) {
     console.warn("[midtrans] logPayment error:", err);
@@ -380,7 +390,7 @@ export async function createSnapTransaction(order: ChargeOrderInput) {
       },
     ],
     callbacks: {
-      finish: `ercoffeelab://orders/${order.id}`,
+      finish: `ercoffeelab://payment-callback?order_number=${order.orderNumber}`,
     },
   };
 

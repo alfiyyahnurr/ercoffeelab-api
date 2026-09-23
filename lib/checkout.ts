@@ -260,6 +260,7 @@ export async function createPaymentDraftSession(input: CreateCheckoutSessionInpu
 
   return {
     orderNumber,
+    attemptId: charge.attemptId,
     paymentType: charge.paymentType || paymentMethod.code,
     total,
     snapToken: charge.snapToken,
