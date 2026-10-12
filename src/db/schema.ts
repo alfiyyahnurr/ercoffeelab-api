@@ -26,6 +26,9 @@ export const customers = pgTable("customers", {
   birthDate: text("birth_date"),
   pin: text("pin"),
   isVerified: boolean("is_verified").notNull().default(false),
+  ssoProvider: text("sso_provider"),
+  ssoSubject: text("sso_subject"),
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS "customers" (
     "birth_date" TEXT,
     "pin" TEXT,
     "is_verified" BOOLEAN DEFAULT false NOT NULL,
+    "sso_provider" TEXT,
+    "sso_subject" TEXT,
+    "avatar_url" TEXT,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
 );
 

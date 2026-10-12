@@ -33,7 +33,7 @@ categories ──── products
 ### Auth & Role
 | Tabel | Kolom penting | Catatan |
 |---|---|---|
-| `customers` | id, phone, email, full_name, is_verified | Login OTP, tanpa password |
+| `customers` | id, phone, email, full_name, pin, is_verified, sso_provider, sso_subject, avatar_url | Login OTP WhatsApp & Google SSO In-App, tanpa password |
 | `otp_codes` | target, channel, code, purpose, expires_at, consumed_at | Expire 5 menit |
 | `staff_users` | id, email, role, outlet_id, **password_hash**, sso_provider, sso_subject, is_active | `role`: super_admin (outlet_id null) \| outlet_admin. `password_hash` NULLABLE — null = SSO-only. Bisa login lewat SSO ATAU password, dua-duanya menghasilkan JWT sama shape. |
 
